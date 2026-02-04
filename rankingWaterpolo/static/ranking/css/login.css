@@ -4,204 +4,194 @@ body {
     margin: 0; padding: 0;
     overflow: hidden;
     font-family: 'Montserrat', sans-serif;
-    background-color: #0099ff;
+    /* Color de seguridad por si no carga el fondo */
+    background-color: #001f33;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
 }
 
-/* --- 1. FONDO DE AGUA (Sin cambios) --- */
+/* --- 1. FONDO HIPERREALISTA: PROFUNDIDAD Y LUZ --- */
 .pool-container {
     position: fixed; inset: 0;
-    background: radial-gradient(circle at center, #00f2fe 0%, #006994 100%);
     z-index: 0;
+
+    /* BASE: Azul océano profundo, casi negro en el fondo */
+    background: linear-gradient(to bottom, #00334e 0%, #001a29 100%);
 }
-.wave-layer {
-    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-    background-position: 0 0, 30px 30px;
-}
+
+/* Usamos las capas para crear "Volumen" (Luces y Sombras) en vez de partículas */
+
+/* CAPA 1: EL SOL EN EL AGUA (El brillo central) */
 .layer-1 {
-    background-image: radial-gradient(rgba(255,255,255,0.2) 2px, transparent 4px);
-    background-size: 60px 60px;
-    animation: move-1 15s linear infinite; opacity: 0.5; transform: rotate(20deg);
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    /* Un gran degradado radial que simula el sol golpeando la superficie */
+    background: radial-gradient(circle at center, rgba(0, 154, 187, 0.4) 0%, transparent 60%);
+
+    /* Animación lenta: simula el sol moviéndose o nubes pasando */
+    animation: sun-shift 20s ease-in-out infinite alternate;
+    mix-blend-mode: screen; /* Se suma a la luz del fondo */
+    filter: blur(40px); /* Muy desenfocado para que sea luz, no forma */
 }
+
+/* CAPA 2: CORRIENTES PROFUNDAS (Movimiento líquido) */
 .layer-2 {
-    background-image: radial-gradient(rgba(255,255,255,0.15) 2px, transparent 4px);
-    background-size: 90px 90px;
-    animation: move-2 12s linear infinite; mix-blend-mode: overlay; opacity: 0.4; transform: rotate(-15deg);
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    /* Formas gigantes de color azul turquesa muy sutiles */
+    background: radial-gradient(ellipse at 70% 30%, rgba(0, 255, 230, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 30% 70%, rgba(0, 100, 255, 0.1) 0%, transparent 50%);
+
+    animation: deep-currents 15s linear infinite;
+    transform-origin: center;
+    filter: blur(60px); /* Borroso total para parecer agua densa */
 }
-@keyframes move-1 { 100% { background-position: 100px 100px; } }
-@keyframes move-2 { 100% { background-position: -150px 50px; } }
+
+/* CAPA EXTRA: ESPUMA EN LOS BORDES (Tu petición) */
+.pool-container::after {
+    content: '';
+    position: absolute; inset: 0;
+    /* La espuma: Transparente en el centro, blanca difusa en los bordes */
+    background: radial-gradient(circle at center, transparent 55%, rgba(255,255,255,0.6) 90%, rgba(255,255,255,0.95) 100%);
+    pointer-events: none;
+    mix-blend-mode: overlay; /* Se fusiona con el azul para parecer mojado */
+    z-index: 2;
+}
+
+
+/* ANIMACIONES SUAVES */
+@keyframes sun-shift {
+    0% { transform: translate(-20px, -20px) scale(1); opacity: 0.8; }
+    100% { transform: translate(20px, 20px) scale(1.1); opacity: 1; }
+}
+
+@keyframes deep-currents {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(5deg) scale(1.1); }
+    100% { transform: rotate(0deg) scale(1); }
+}
+
 
 /* --- 2. ANIMADOR (BOYA) --- */
 .float-animator {
-    position: relative; z-index: 10;
-    animation: bobbing 4s ease-in-out infinite;
+    position: relative;
+    z-index: 10;
+    animation: bobbing 5s ease-in-out infinite; /* Un poco más lento, más pesado/realista */
     display: flex; justify-content: center; align-items: center;
 }
 
-/* --- 3. EL FLOTADOR GIGANTE (Sin cambios de tamaño) --- */
+/* --- 3. FLOTADOR GIGANTE --- */
 .lifebuoy-ring {
-    width: 92vmin;
-    height: 92vmin;
-    max-width: 850px;
-    max-height: 850px;
-
-    background-color: #ff2e2e;
+    width: 92vmin; height: 92vmin;
+    max-width: 850px; max-height: 850px;
+    background-color: #d62828; /* Rojo un poco más oscuro/realista */
     border-radius: 50%;
     position: relative;
     display: flex; align-items: center; justify-content: center;
 
+    /* Sombra ULTRA realista (luz ambiental) */
     box-shadow:
-        inset 30px 30px 60px rgba(255,255,255,0.4),
-        inset -30px -30px 60px rgba(0,0,0,0.3),
-        0 40px 80px rgba(0,0,0,0.5);
+        inset 20px 20px 60px rgba(255,255,255,0.25), /* Brillo superior */
+        inset -20px -20px 60px rgba(0,0,0,0.5),    /* Sombra inferior interna */
+        0 40px 80px rgba(0,0,0,0.6);               /* Sombra proyectada en el agua */
 }
 
 /* --- 4. CINTAS BLANCAS --- */
 .white-tape {
     position: absolute;
-    background: rgba(255,255,255,0.9);
+    background: rgba(240,240,240,0.95); /* Blanco hueso, más real */
     z-index: 1;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
-.tape-top { top: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 60px; }
-.tape-bottom { bottom: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 60px; }
-.tape-left { left: 0; top: 50%; transform: translateY(-50%); width: 60px; height: 100px; }
-.tape-right { right: 0; top: 50%; transform: translateY(-50%); width: 60px; height: 100px; }
+.tape-top {
+    top: 0; left: 50%; transform: translateX(-50%); width: 14%; height: 16%;
+}
+.tape-bottom {
+    bottom: 0; left: 50%; transform: translateX(-50%); width: 14%; height: 16%;
+}
+.tape-left {
+    left: 0; top: 50%; transform: translateY(-50%); width: 16%; height: 14%;
+}
+.tape-right {
+    right: 0; top: 50%; transform: translateY(-50%); width: 16%; height: 14%;
+}
 
-/* --- 5. EL FORMULARIO AMARILLO (MEJORADO Y MÁS PEQUEÑO) --- */
+/* --- 5. EL FORMULARIO (BALÓN) --- */
 .form-circle {
-    width: 70%;
-    height: 70%;
-
-    /* MEJORA: Gradiente radial para dar volumen de pelota, no plano */
-    background: radial-gradient(circle at center, #FFC20E 0%, #e6ac00 100%);
-
+    width: 70%; height: 70%;
+    /* Gradiente esférico mejorado */
+    background: radial-gradient(circle at 30% 30%, #ffd54f 0%, #ffc107 40%, #ff8f00 100%);
     border-radius: 50%;
-    border: 4px solid #111; /* Borde un poco más fino y elegante */
+    border: 4px solid #222;
     z-index: 2;
 
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     position: relative; overflow: hidden;
-    box-shadow: inset 0 0 40px rgba(0,0,0,0.4); /* Sombra interna más suave */
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5); /* Sombra interna fuerte */
 }
 
 .turbo-grip {
     position: absolute; inset: 0;
-    background-image: radial-gradient(rgba(0,0,0,0.1) 1px, transparent 1px); /* Textura más sutil */
-    background-size: 5px 5px; pointer-events: none; opacity: 0.7;
+    background-image: radial-gradient(rgba(0,0,0,0.15) 1px, transparent 1px);
+    background-size: 6px 6px; pointer-events: none; opacity: 0.6;
 }
 
-/* CONTENIDO INTERNO MÁS PEQUEÑO Y CENTRADO */
 .form-content {
     position: relative; z-index: 20;
-    width: 55%; /* MUCHO MÁS PEQUEÑO: Deja aire alrededor */
+    width: 55%;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    display: flex; flex-direction: column; justify-content: center;
 }
 
-/* Títulos más elegantes */
 h1 {
-    font-size: 2rem !important; /* Un poco más pequeño que el gigante anterior */
-    margin-bottom: 0.5rem !important;
-    letter-spacing: -1px;
+    font-size: 2rem !important; margin-bottom: 0.5rem !important; letter-spacing: -1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Inputs más bonitos y refinados */
 .turbo-input {
-    background: #fff;
-    border: 2px solid #111; /* Borde más fino */
-    color: #111;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 10px; /* Menos espacio entre inputs */
-    width: 100%;
-    padding: 12px; /* Padding más equilibrado */
-    border-radius: 12px;
-    font-size: 0.95rem; /* Letra más elegante */
-    transition: all 0.2s ease;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    background: #fff; border: 2px solid #333; color: #111; font-weight: 700;
+    text-align: center; margin-bottom: 10px; width: 100%; padding: 12px;
+    border-radius: 12px; font-size: 0.95rem; transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 .turbo-input:focus {
-    border-color: #0099ff; /* Toque de color azul al enfocar */
-    box-shadow: 0 0 0 3px rgba(0,153,255,0.2);
-    outline: none;
+    border-color: #0088cc; box-shadow: 0 0 0 4px rgba(0,136,204,0.2); outline: none;
 }
 .turbo-input::placeholder {
-    color: #888; font-weight: 600; letter-spacing: 1px; font-size: 0.8rem;
+    color: #999; font-weight: 600; letter-spacing: 1px; font-size: 0.8rem;
 }
 
-/* Botón más premium */
 .turbo-btn {
-    width: 100%;
-    background: linear-gradient(to bottom, #222, #111); /* Degradado sutil */
-    color: #FFC20E;
-    font-weight: 900;
-    padding: 14px;
-    border-radius: 30px;
-    text-transform: uppercase;
-    font-size: 1rem;
-    letter-spacing: 2px;
-    box-shadow: 0 4px 0 #000, inset 0 2px 2px rgba(255,255,255,0.2); /* Sombra dura + brillo superior */
-    margin-top: 15px;
-    cursor: pointer;
-    transition: all 0.1s;
-    border: none;
+    width: 100%; background: linear-gradient(to bottom, #333, #111);
+    color: #ffc107; font-weight: 900; padding: 14px; border-radius: 30px;
+    text-transform: uppercase; font-size: 1rem; letter-spacing: 2px;
+    box-shadow: 0 5px 0 #000, 0 10px 10px rgba(0,0,0,0.2); /* Botón con volumen */
+    margin-top: 15px; cursor: pointer; transition: all 0.1s; border: none;
 }
-.turbo-btn:active { transform: translateY(4px); box-shadow: inset 0 2px 2px rgba(255,255,255,0.1); }
-.turbo-btn:hover { background: linear-gradient(to bottom, #333, #1a1a1a); }
+.turbo-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #000; }
+.turbo-btn:hover { background: linear-gradient(to bottom, #444, #222); }
 
-/* Enlace inferior más discreto */
 .footer-link a {
-    font-size: 0.7rem; letter-spacing: 1.5px; border-bottom-width: 1px; opacity: 0.8;
+    font-size: 0.7rem; letter-spacing: 1.5px; border-bottom-width: 1px; opacity: 0.7;
 }
 .footer-link a:hover { opacity: 1; }
 
 @keyframes bobbing {
     0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(2deg); }
+    50% { transform: translateY(-25px) rotate(1.5deg); }
 }
 
 .password-wrapper {
-    position: relative;
-    width: 100%;
-    margin-bottom: 10px;
-    display: flex; /* Asegura que el input y el botón se comporten bien */
+    position: relative; width: 100%; margin-bottom: 10px; display: flex;
 }
-
-/* Ajuste importante para que el texto no toque el ojo */
 .password-wrapper .turbo-input {
-    margin-bottom: 0 !important; /* El margen lo maneja el wrapper */
-    padding-right: 45px !important; /* Espacio reservado para el ojo */
+    margin-bottom: 0 !important; padding-right: 45px !important;
 }
 
 .eye-btn {
-    position: absolute;
-    right: 5px; /* Un poco separado del borde derecho */
-    top: 0;
-    bottom: 0; /* ESTO ES LA CLAVE: Ocupa toda la altura del input */
-    height: 100%;
-
-    background: transparent;
-    border: none;
-    cursor: pointer;
-
-    /* Flexbox para centrar el icono SVG dentro del botón */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 0 10px; /* Área de clic cómoda */
-    z-index: 10;
-    color: #111;
-    opacity: 0.6;
-    transition: opacity 0.2s;
+    position: absolute; right: 5px; top: 0; bottom: 0; height: 100%;
+    background: transparent; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 10px; z-index: 10; color: #111; opacity: 0.6; transition: opacity 0.2s;
 }
-
-.eye-btn:hover {
-    opacity: 1;
-}
+.eye-btn:hover { opacity: 1; }
