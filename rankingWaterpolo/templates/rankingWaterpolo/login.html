@@ -1,72 +1,75 @@
-<!DOCTYPE html>
+{% load static %}
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Club - Waterpolo Ranking</title>
+    <title>Waterpolo Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
-    <style>
-        .goal-grid {
-            background-image:
-                linear-gradient(white 2px, transparent 2px),
-                linear-gradient(90deg, white 2px, transparent 2px);
-            background-size: 40px 40px;
-            background-position: center;
-            opacity: 0.15;
-        }
-        .water-bg {
-            background: linear-gradient(180deg, #004e92 0%, #000428 100%);
-        }
-        .font-heavy { font-family: 'Montserrat', sans-serif; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'ranking/css/login.css' %}">
 </head>
-<body class="water-bg min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
+<body>
 
-    <div class="absolute inset-0 goal-grid"></div>
+    <div class="pool-container">
+        <div class="wave-layer layer-1"></div>
+        <div class="wave-layer layer-2"></div>
+    </div>
 
-    <div class="relative w-full max-w-lg">
+    <div class="float-animator">
+        <div class="lifebuoy-ring">
+            <div class="white-tape tape-top"></div>
+            <div class="white-tape tape-bottom"></div>
+            <div class="white-tape tape-left"></div>
+            <div class="white-tape tape-right"></div>
 
-        <div class="absolute -inset-4 border-t-[12px] border-x-[12px] border-white rounded-t-lg z-0"></div>
+            <div class="form-circle">
+                <div class="turbo-grip"></div>
 
-        <div class="absolute -top-12 left-12 z-20 transition-transform hover:scale-110 duration-300">
-            <div class="flex flex-col items-center">
-                <div class="w-0.5 h-10 bg-white/50"></div>
-                <div class="relative bg-white text-blue-900 w-12 h-12 rounded-full flex items-center justify-center font-bold border-2 border-blue-500 shadow-xl">
-                    5
-                    <div class="absolute -bottom-1 w-6 h-4 bg-white rounded-b-full"></div>
+                <div class="form-content">
+                    <h1 class="text-3xl font-black italic text-black leading-none mb-2 drop-shadow-sm">
+                        WP<br><span class="text-xl">RANKING</span>
+                    </h1>
+
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <div class="w-full">
+                            <input type="text" name="nickname" placeholder="USUARIO" required class="turbo-input">
+                        </div>
+
+                        <div class="password-wrapper">
+                            <input type="password" name="password" id="passwordInput" placeholder="CONTRASEÑA" required class="turbo-input">
+
+                            <button type="button" class="eye-btn" onclick="togglePassword()">
+                                <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="bg-red-600 text-white text-[10px] p-1 mb-2 rounded font-bold">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <button type="submit" class="turbo-btn">
+                            Entrar
+                        </button>
+                    </form>
+
+                    <div class="mt-4 footer-link">
+                        <a href="#" onclick="splashAction(event)" class="text-[10px] font-black text-black/70 hover:text-black uppercase tracking-widest border-b border-black/20 pb-1">
+                            Crear Cuenta
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="relative z-10 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl p-10 border-b-8 border-orange-500">
-            <h2 class="font-heavy text-4xl text-center text-blue-900 mb-2 tracking-tighter italic">LOGIN</h2>
-            <p class="text-center text-gray-500 text-sm mb-8 font-bold uppercase tracking-widest">Área Técnica</p>
-
-            <form method="POST" class="space-y-6">
-                {% csrf_token %}
-
-                <div>
-                    <label class="block text-[10px] font-black text-blue-900 mb-1 tracking-widest">NICKNAME</label>
-                    <input type="text" name="nickname" required
-                        class="w-full bg-blue-50 border-2 border-blue-100 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none font-bold text-blue-900 transition-all"
-                        placeholder="ADMIN_WP">
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-black text-blue-900 mb-1 tracking-widest">CONTRASEÑA</label>
-                    <input type="password" name="password" required
-                        class="w-full bg-blue-50 border-2 border-blue-100 rounded-lg px-4 py-3 focus:border-blue-500 focus:outline-none font-bold text-blue-900 transition-all"
-                        placeholder="••••••••">
-                </div>
-
-                <button type="submit"
-                    class="w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-4 rounded-lg shadow-[0_4px_0_rgb(194,84,0)] active:shadow-none active:translate-y-1 transition-all uppercase italic tracking-tighter">
-                    Saltar al Agua
-                </button>
-            </form>
-        </div>
     </div>
+
+    <script src="{% static 'ranking/js/login.js' %}"></script>
 
 </body>
 </html>

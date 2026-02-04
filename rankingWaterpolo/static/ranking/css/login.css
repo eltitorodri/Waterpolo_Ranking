@@ -1,0 +1,207 @@
+/* static/ranking/css/login.css */
+
+body {
+    margin: 0; padding: 0;
+    overflow: hidden;
+    font-family: 'Montserrat', sans-serif;
+    background-color: #0099ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* --- 1. FONDO DE AGUA (Sin cambios) --- */
+.pool-container {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at center, #00f2fe 0%, #006994 100%);
+    z-index: 0;
+}
+.wave-layer {
+    position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background-position: 0 0, 30px 30px;
+}
+.layer-1 {
+    background-image: radial-gradient(rgba(255,255,255,0.2) 2px, transparent 4px);
+    background-size: 60px 60px;
+    animation: move-1 15s linear infinite; opacity: 0.5; transform: rotate(20deg);
+}
+.layer-2 {
+    background-image: radial-gradient(rgba(255,255,255,0.15) 2px, transparent 4px);
+    background-size: 90px 90px;
+    animation: move-2 12s linear infinite; mix-blend-mode: overlay; opacity: 0.4; transform: rotate(-15deg);
+}
+@keyframes move-1 { 100% { background-position: 100px 100px; } }
+@keyframes move-2 { 100% { background-position: -150px 50px; } }
+
+/* --- 2. ANIMADOR (BOYA) --- */
+.float-animator {
+    position: relative; z-index: 10;
+    animation: bobbing 4s ease-in-out infinite;
+    display: flex; justify-content: center; align-items: center;
+}
+
+/* --- 3. EL FLOTADOR GIGANTE (Sin cambios de tamaño) --- */
+.lifebuoy-ring {
+    width: 92vmin;
+    height: 92vmin;
+    max-width: 850px;
+    max-height: 850px;
+
+    background-color: #ff2e2e;
+    border-radius: 50%;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+
+    box-shadow:
+        inset 30px 30px 60px rgba(255,255,255,0.4),
+        inset -30px -30px 60px rgba(0,0,0,0.3),
+        0 40px 80px rgba(0,0,0,0.5);
+}
+
+/* --- 4. CINTAS BLANCAS --- */
+.white-tape {
+    position: absolute;
+    background: rgba(255,255,255,0.9);
+    z-index: 1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.tape-top { top: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 60px; }
+.tape-bottom { bottom: 0; left: 50%; transform: translateX(-50%); width: 100px; height: 60px; }
+.tape-left { left: 0; top: 50%; transform: translateY(-50%); width: 60px; height: 100px; }
+.tape-right { right: 0; top: 50%; transform: translateY(-50%); width: 60px; height: 100px; }
+
+/* --- 5. EL FORMULARIO AMARILLO (MEJORADO Y MÁS PEQUEÑO) --- */
+.form-circle {
+    width: 70%;
+    height: 70%;
+
+    /* MEJORA: Gradiente radial para dar volumen de pelota, no plano */
+    background: radial-gradient(circle at center, #FFC20E 0%, #e6ac00 100%);
+
+    border-radius: 50%;
+    border: 4px solid #111; /* Borde un poco más fino y elegante */
+    z-index: 2;
+
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.4); /* Sombra interna más suave */
+}
+
+.turbo-grip {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(0,0,0,0.1) 1px, transparent 1px); /* Textura más sutil */
+    background-size: 5px 5px; pointer-events: none; opacity: 0.7;
+}
+
+/* CONTENIDO INTERNO MÁS PEQUEÑO Y CENTRADO */
+.form-content {
+    position: relative; z-index: 20;
+    width: 55%; /* MUCHO MÁS PEQUEÑO: Deja aire alrededor */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Títulos más elegantes */
+h1 {
+    font-size: 2rem !important; /* Un poco más pequeño que el gigante anterior */
+    margin-bottom: 0.5rem !important;
+    letter-spacing: -1px;
+}
+
+/* Inputs más bonitos y refinados */
+.turbo-input {
+    background: #fff;
+    border: 2px solid #111; /* Borde más fino */
+    color: #111;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px; /* Menos espacio entre inputs */
+    width: 100%;
+    padding: 12px; /* Padding más equilibrado */
+    border-radius: 12px;
+    font-size: 0.95rem; /* Letra más elegante */
+    transition: all 0.2s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+.turbo-input:focus {
+    border-color: #0099ff; /* Toque de color azul al enfocar */
+    box-shadow: 0 0 0 3px rgba(0,153,255,0.2);
+    outline: none;
+}
+.turbo-input::placeholder {
+    color: #888; font-weight: 600; letter-spacing: 1px; font-size: 0.8rem;
+}
+
+/* Botón más premium */
+.turbo-btn {
+    width: 100%;
+    background: linear-gradient(to bottom, #222, #111); /* Degradado sutil */
+    color: #FFC20E;
+    font-weight: 900;
+    padding: 14px;
+    border-radius: 30px;
+    text-transform: uppercase;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 0 #000, inset 0 2px 2px rgba(255,255,255,0.2); /* Sombra dura + brillo superior */
+    margin-top: 15px;
+    cursor: pointer;
+    transition: all 0.1s;
+    border: none;
+}
+.turbo-btn:active { transform: translateY(4px); box-shadow: inset 0 2px 2px rgba(255,255,255,0.1); }
+.turbo-btn:hover { background: linear-gradient(to bottom, #333, #1a1a1a); }
+
+/* Enlace inferior más discreto */
+.footer-link a {
+    font-size: 0.7rem; letter-spacing: 1.5px; border-bottom-width: 1px; opacity: 0.8;
+}
+.footer-link a:hover { opacity: 1; }
+
+@keyframes bobbing {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 10px;
+    display: flex; /* Asegura que el input y el botón se comporten bien */
+}
+
+/* Ajuste importante para que el texto no toque el ojo */
+.password-wrapper .turbo-input {
+    margin-bottom: 0 !important; /* El margen lo maneja el wrapper */
+    padding-right: 45px !important; /* Espacio reservado para el ojo */
+}
+
+.eye-btn {
+    position: absolute;
+    right: 5px; /* Un poco separado del borde derecho */
+    top: 0;
+    bottom: 0; /* ESTO ES LA CLAVE: Ocupa toda la altura del input */
+    height: 100%;
+
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    /* Flexbox para centrar el icono SVG dentro del botón */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 10px; /* Área de clic cómoda */
+    z-index: 10;
+    color: #111;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.eye-btn:hover {
+    opacity: 1;
+}
