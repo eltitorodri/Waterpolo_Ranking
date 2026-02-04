@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    {% load static %}
+    <title>{% block title %}Ranking Waterpolo{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'ranking/css/style.css' %}">
+</head>
+<body>
+    <nav>
+        <h1>Waterpolo Ranking</h1>
+    </nav>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <script src="{% static 'ranking/js/main.js' %}"></script>
+</body>
+</html>

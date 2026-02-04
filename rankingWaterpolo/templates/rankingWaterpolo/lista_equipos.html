@@ -1,0 +1,29 @@
+{% extends 'rankingWaterpolo/base.html' %}
+
+{% block content %}
+<h2>Ranking Actual de Waterpolo</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Liga</th>
+            <th>Entrenador</th>
+            <th>Ciudad</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for equipo in equipos %}
+        <tr>
+            <td>{{ equipo.nombre }}</td>
+            <td>{{ equipo.liga }}</td>
+            <td>{{ equipo.entrenador }}</td>
+            <td>{{ equipo.ciudad }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No hay equipos en la base de datos.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
