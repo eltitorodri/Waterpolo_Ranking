@@ -4,14 +4,15 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from .models import Team
 
-
+@login_required
 def home(request):
     equipos = Team.objects.all()
-
     return render(request, 'rankingWaterpolo/lista_equipos.html', {'equipos': equipos})
 
-@login_required
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')  # si ya está logueado, va directo a home
+
     if request.method == 'POST':
         nombre_usuario = request.POST.get('nickname')
         clave = request.POST.get('password')
