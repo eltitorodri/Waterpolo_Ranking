@@ -2,3 +2,16 @@
 venv/
 .venv/
 env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# IDEs
+.vscode/
+.idea/
