@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WP Ranking - Registro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'ranking/css/login.css' %}">
+</head>
+<body class="opacity-0 transition-opacity duration-500">
+
+    <div id="bigWave" class="big-wave-transition"></div>
+
+    <div class="pool-container">
+        <div class="wave-layer layer-1"></div>
+        <div class="wave-layer layer-2"></div>
+    </div>
+
+    <div class="float-animator" id="signupFloat" style="opacity: 0;">
+        <div class="lifebuoy-ring">
+            <div class="white-tape tape-top"></div>
+            <div class="white-tape tape-bottom"></div>
+            <div class="white-tape tape-left"></div>
+            <div class="white-tape tape-right"></div>
+
+            <div class="form-circle">
+                <div class="turbo-grip"></div>
+                <div class="form-content">
+                    <h1 class="text-2xl font-black italic text-black mb-2">REGISTRO</h1>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="text" name="username" placeholder="NICKNAME" class="turbo-input" required>
+                        <input type="email" name="email" placeholder="E-MAIL" class="turbo-input" required>
+                        <input type="password" name="password" placeholder="CONTRASEÑA" class="turbo-input" required>
+                        <input type="password" name="confirm_password" placeholder="REPETIR PASS" class="turbo-input" required>
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="text-red-700 text-[8px] font-bold uppercase mb-1">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <button type="submit" class="turbo-btn">Unirse</button>
+                    </form>
+
+                    <div class="mt-3">
+                        <a href="javascript:void(0)" onclick="goToLogin(event)" class="text-black font-black italic text-[9px] uppercase tracking-tighter hover:underline">
+                            ¿Ya tienes cuenta? Entra
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.body.classList.remove('opacity-0');
+            const floater = document.getElementById('signupFloat');
+
+            setTimeout(() => {
+                floater.style.opacity = "1";
+                floater.classList.add('float-in-surge');
+            }, 100);
+        });
+
+        function goToLogin(event) {
+            event.preventDefault();
+            const wave = document.getElementById('bigWave');
+            const floater = document.getElementById('signupFloat');
+
+            wave.classList.add('wave-sweep');
+            floater.classList.add('float-out');
+
+            setTimeout(() => {
+                window.location.href = "{% url 'login' %}";
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
