@@ -75,6 +75,11 @@ WSGI_APPLICATION = 'waterpolo_ranking.wsgi.application'
 
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
+
+    'mongo_db': {
         'ENGINE': 'djongo',
         'NAME': 'Waterpolo',
         'ENFORCE_SCHEMA': False,
@@ -125,3 +130,5 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
+
+DATABASE_ROUTERS = ['waterpolo_ranking.routers.MongoRouter']
