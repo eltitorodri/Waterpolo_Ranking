@@ -1,0 +1,96 @@
+{% extends 'rankingWaterpolo/base.html' %}
+{% block content %}
+<div class="mb-10 text-center">
+    <h1 class="text-4xl font-black text-blue-900 mb-2">
+        Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
+    </h1>
+    <p class="text-slate-500 max-w-2xl mx-auto">
+        Explora las categorías, puntúa a tus favoritos y crea tu propio ranking personal.
+        {% if user.is_staff %}
+            <br><span class="text-amber-600 font-bold text-sm">🛠️ Tienes permisos de administrador para gestionar el sistema.</span>
+        {% endif %}
+    </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-4 hover:shadow-md transition">
+        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+            <i class="ph ph-trophy text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-400 font-bold uppercase">Mejor Valorado</p>
+            <h3 class="text-lg font-bold text-slate-800">C.N. Atlètic-Barceloneta</h3> </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-4 hover:shadow-md transition">
+        <div class="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600">
+            <i class="ph ph-star text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-slate-400 font-bold uppercase">Total Valoraciones</p>
+            <h3 class="text-lg font-bold text-slate-800">1,240</h3> </div>
+    </div>
+
+    <a href="#" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-between hover:bg-blue-700 transition cursor-pointer">
+        <div>
+            <p class="text-xs text-blue-200 font-bold uppercase">Tu espacio</p>
+            <h3 class="text-lg font-bold text-white group-hover:translate-x-1 transition-transform">Ver Mis Rankings &rarr;</h3>
+        </div>
+        <i class="ph ph-list-numbers text-white text-3xl opacity-50 group-hover:opacity-100 transition"></i>
+    </a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
+    
+    {% if user.is_staff %}
+    <button class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
+        <i class="ph ph-plus-circle"></i> Nueva Categoría
+    </button>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    
+    <a href="#" class="block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 border border-slate-100">
+        <div class="h-32 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1530549387789-4c1017266635?q=80&w=1000&auto=format&fit=crop');">
+            <div class="w-full h-full bg-blue-900/40 flex items-end p-4">
+                <span class="bg-white text-blue-900 text-xs font-bold px-2 py-1 rounded">Equipos</span>
+            </div>
+        </div>
+        <div class="p-5">
+            <h3 class="text-lg font-bold text-slate-800 mb-1">División de Honor</h3>
+            <p class="text-sm text-slate-500 line-clamp-2">Ranking de los mejores equipos de la liga nacional.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
+                <span class="text-xs text-slate-400">12 Elementos</span>
+                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Puntuar <i class="ph ph-caret-right"></i></span>
+            </div>
+        </div>
+    </a>
+
+    <a href="#" class="block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 border border-slate-100">
+        <div class="h-32 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1576616839447-60a63572be46?q=80&w=1000&auto=format&fit=crop');">
+            <div class="w-full h-full bg-cyan-900/40 flex items-end p-4">
+                <span class="bg-white text-cyan-900 text-xs font-bold px-2 py-1 rounded">Jugadores</span>
+            </div>
+        </div>
+        <div class="p-5">
+            <h3 class="text-lg font-bold text-slate-800 mb-1">MVPs Temporada</h3>
+            <p class="text-sm text-slate-500 line-clamp-2">Vota por el jugador más valioso de la temporada actual.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
+                <span class="text-xs text-slate-400">45 Elementos</span>
+                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Puntuar <i class="ph ph-caret-right"></i></span>
+            </div>
+        </div>
+    </a>
+
+    {% if user.is_staff %}
+    <button class="group w-full h-full min-h-[250px] border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 transition hover:bg-blue-50/50">
+        <i class="ph ph-plus text-4xl mb-2 group-hover:scale-110 transition-transform"></i>
+        <span class="font-bold text-sm">Añadir Categoría</span>
+    </button>
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,17 +1,16 @@
 from django.db import models
 
 class Team(models.Model):
-    # Django creará el _id automáticamente, pero si ya existe en Mongo, lo reconocerá.
     nombre = models.CharField(max_length=100)
-    escudo = models.URLField(max_length=500, blank=True, null=True) # URL de la imagen
+    escudo = models.URLField(max_length=500, blank=True, null=True)
     liga = models.CharField(max_length=100)
-    sexo = models.CharField(max_length=20) # Ejemplo: Masculino, Femenino, Mixto
+    sexo = models.CharField(max_length=20)
     entrenador = models.CharField(max_length=100)
     piscina = models.CharField(max_length=100)
     ciudad = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'teams'  # MUY IMPORTANTE: Esto le dice a Django que use tu colección existente
+        db_table = 'teams'
         verbose_name = "Equipo"
         verbose_name_plural = "Equipos"
 

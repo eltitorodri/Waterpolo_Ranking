@@ -1,5 +1,4 @@
 {% load static %}
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -34,7 +33,7 @@
 
                     <form method="POST">
                         {% csrf_token %}
-                        <input type="text" name="nickname" placeholder="USUARIO" required class="turbo-input">
+                        <input type="text" name="username" placeholder="USUARIO" required class="turbo-input">
 
                         <div class="password-wrapper">
                             <input type="password" name="password" id="passwordInput" placeholder="CONTRASEÑA" required class="turbo-input">
