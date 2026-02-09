@@ -20,7 +20,7 @@ class Team(models.Model):
     ciudad = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'teams' # Forzamos a que use tu tabla de Mongo
+        db_table = 'equipos'
         verbose_name = "Equipo"
         verbose_name_plural = "Equipos"
 

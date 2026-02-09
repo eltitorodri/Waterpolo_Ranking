@@ -1,5 +1,32 @@
 {% extends 'rankingWaterpolo/base.html' %}
 {% block content %}
+
+{% if messages %}
+    <div class="fixed top-24 right-5 z-50 flex flex-col gap-2">
+        {% for message in messages %}
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg flex items-center gap-3 animate-bounce-in transform transition-all duration-500" role="alert">
+            <i class="ph ph-check-circle text-2xl"></i>
+            <div>
+                <p class="font-bold">¡Hecho!</p>
+                <p class="text-sm">{{ message }}</p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="ml-4 text-green-500 hover:text-green-700">
+                <i class="ph ph-x-circle text-lg"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('[role="alert"]');
+            alerts.forEach(function(alert) {
+                alert.style.opacity = '0'; // Desvanecer
+                setTimeout(function() { alert.remove(); }, 500); // Eliminar del DOM
+            });
+        }, 5000); // 5 segundos
+    </script>
+{% endif %}
 <div class="mb-10 text-center">
     <h1 class="text-4xl font-black text-blue-900 mb-2">
         Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
@@ -39,12 +66,12 @@
         </div>
     </div>
 
-    <a href="#" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-between hover:bg-blue-700 transition cursor-pointer">
-        <div>
-            <p class="text-xs text-blue-200 font-bold uppercase">Tu espacio</p>
-            <h3 class="text-lg font-bold text-white group-hover:translate-x-1 transition-transform">Ver Mis Rankings &rarr;</h3>
-        </div>
-        <i class="ph ph-list-numbers text-white text-3xl opacity-50 group-hover:opacity-100 transition"></i>
+    <a href="{% url 'crear_top5' %}" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-between hover:bg-blue-700 transition cursor-pointer">
+    <div>
+        <p class="text-xs text-blue-200 font-bold uppercase">Tu espacio</p>
+        <h3 class="text-lg font-bold text-white group-hover:translate-x-1 transition-transform">Crear Mi Top 5 &rarr;</h3>
+    </div>
+    <i class="ph ph-list-numbers text-white text-3xl opacity-50 group-hover:opacity-100 transition"></i>
     </a>
 </div>
 
@@ -109,5 +136,4 @@
     {% endif %}
 
 </div>
-
 {% endblock %}

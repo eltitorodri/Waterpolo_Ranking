@@ -1,0 +1,35 @@
+{% extends 'rankingWaterpolo/base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10">
+    <div class="mb-8 text-center">
+        <h1 class="text-3xl font-black text-blue-900 mb-2">Puntúa a tu equipo</h1>
+        <p class="text-slate-500">Tu valoración ayudará a calcular la media del ranking global.</p>
+    </div>
+
+    <form method="post" class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        {% csrf_token %}
+
+        <div class="space-y-6">
+            {% for field in form %}
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-8 flex gap-4">
+            <button type="submit" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-100">
+                Publicar Valoración
+            </button>
+            <a href="{% url 'home' %}" class="px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
