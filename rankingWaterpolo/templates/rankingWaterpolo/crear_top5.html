@@ -31,12 +31,13 @@
                 <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
                     <i class="ph ph-squares-four text-blue-500"></i> Equipos Disponibles
                 </h3>
+
                 <div id="lista-disponibles" class="grid grid-cols-2 sm:grid-cols-3 gap-3 min-h-[200px]">
                     {% for equipo in equipos %}
                     <div class="cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group relative"
-                         data-id="{{ equipo.pk }}">
+                         data-id="{{ equipo.nombre }}">
 
-                        <div class="flex flex-col items-center text-center gap-2">
+                        <div class="flex flex-col items-center text-center gap-2 pointer-events-none">
                             <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 border border-slate-100 shadow-sm overflow-hidden">
                                 {% if equipo.escudo %}
                                     <img src="{{ equipo.escudo }}" alt="{{ equipo.nombre }}" class="w-full h-full object-contain">
@@ -46,7 +47,8 @@
                             </div>
                             <span class="text-xs font-bold text-slate-700 leading-tight line-clamp-2">{{ equipo.nombre }}</span>
                         </div>
-                        <i class="ph ph-dots-six absolute top-2 right-2 text-slate-300 opacity-0 group-hover:opacity-100"></i>
+
+                        <i class="ph ph-dots-six absolute top-2 right-2 text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none"></i>
                     </div>
                     {% endfor %}
                 </div>
@@ -80,70 +82,61 @@
 </div>
 
 <script>
-    // Referencias a las listas DOM
     var elDisponibles = document.getElementById('lista-disponibles');
     var elRanking = document.getElementById('lista-ranking');
 
-    // 1. Configurar la lista de ORIGEN (Izquierda - Disponibles)
+    // 1. Configurar lista ORIGEN (Disponibles)
     new Sortable(elDisponibles, {
-        group: {
-            name: 'equipos',
-            pull: true,  // Permite sacar elementos
-            put: true    // Permite devolver elementos aquí
-        },
+        group: { name: 'equipos', pull: true, put: true },
         animation: 150,
-        sort: false, // No hace falta ordenar la lista de origen
+        sort: false,
         onSort: function (evt) {
-            // Cuando un elemento vuelve aquí, le quitamos los estilos de ranking
+            // Si devolvemos algo aquí, restauramos su estilo original
             restaurarDiseñoOriginal();
         }
     });
 
-    // 2. Configurar la lista de DESTINO (Derecha - Ranking)
+    // 2. Configurar lista DESTINO (Ranking)
     new Sortable(elRanking, {
-        group: {
-            name: 'equipos',
-        },
+        group: { name: 'equipos' },
         animation: 150,
         onAdd: function (evt) {
-            // Validar límite de 5 equipos
+            // Límite de 5
             if (elRanking.children.length > 5) {
-                // Devolvemos el elemento a la lista de origen
                 elDisponibles.appendChild(evt.item);
                 alert("⚠️ ¡El Top 5 está completo! Quita uno antes de añadir otro.");
             }
-            actualizarRanking(); // Poner números y estilos
-            restaurarDiseñoOriginal(); // Asegurar que el origen esté limpio
+            actualizarRanking(); // Cambia a diseño horizontal
+            restaurarDiseñoOriginal(); // Asegura que la izquierda esté limpia
         },
-        onSort: actualizarRanking, // Reordenar números al mover dentro del ranking
-        onRemove: actualizarRanking // Reordenar si sacamos uno
+        onSort: actualizarRanking, // Reordena números
+        onRemove: actualizarRanking // Reordena si sacamos uno
     });
 
-    // --- FUNCIÓN 1: Pone el diseño de RANKING (Horizontal con números) ---
+    // --- FUNCIÓN 1: Transforma la tarjeta a modo "Fila Horizontal" ---
     function actualizarRanking() {
         var items = elRanking.children;
 
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
 
-            // 1. Cambiar CSS a modo "Fila Horizontal"
+            // 1. Cambiamos el CSS del contenedor principal
             item.className = "bg-white p-3 rounded-xl border border-blue-200 shadow-sm flex items-center gap-3 relative cursor-grab transition";
 
-            // Ajustar el contenedor interno de la imagen/texto para que se vea horizontal
-            var innerDiv = item.firstElementChild;
-            if(innerDiv && innerDiv.classList.contains('flex-col')) {
+            // 2. Buscamos el div interno (donde está img y texto) para ponerlo en fila
+            var innerDiv = item.querySelector('div.flex-col');
+            if(innerDiv) {
                 innerDiv.classList.remove('flex-col', 'text-center');
                 innerDiv.classList.add('flex-row', 'text-left');
             }
 
-            // 2. Gestionar el BADGE (Número)
+            // 3. Añadir/Actualizar Badge de número
             var badge = item.querySelector('.badge-numero');
             if (!badge) {
                 badge = document.createElement('div');
-                item.prepend(badge); // Lo insertamos al principio
+                item.prepend(badge);
             }
 
-            // Colores según posición (1º Oro, Resto Azul)
             if (i === 0) {
                 badge.className = 'badge-numero w-8 h-8 flex-none rounded-full flex items-center justify-center font-black text-white text-sm mr-2 bg-amber-400 shadow-amber-200 shadow-md';
                 badge.innerHTML = '<i class="ph ph-crown"></i>';
@@ -152,94 +145,83 @@
                 badge.innerText = i + 1;
             }
 
-            // 3. Añadir botón de borrar (X) si no existe
+            // 4. Botón de borrar (X)
             if (!item.querySelector('.btn-borrar')) {
                 var btnBorrar = document.createElement('i');
                 btnBorrar.className = 'btn-borrar ph ph-x-circle absolute right-3 text-slate-300 hover:text-red-500 cursor-pointer text-xl transition';
-
-                // Al hacer click en la X, lo devolvemos a la lista de disponibles
                 btnBorrar.onclick = function() {
                     var tarjeta = this.parentElement;
-                    elDisponibles.appendChild(tarjeta); // Lo mueve al HTML de disponibles
-                    restaurarDiseñoOriginal(); // Le quita el disfraz de ranking
-                    actualizarRanking(); // Recalcula los números del ranking
+                    elDisponibles.appendChild(tarjeta);
+                    restaurarDiseñoOriginal();
+                    actualizarRanking();
                 };
                 item.appendChild(btnBorrar);
             }
         }
     }
 
-    // --- FUNCIÓN 2: Restaura el diseño ORIGINAL (Vertical sin números) ---
+    // --- FUNCIÓN 2: Restaura el diseño a "Tarjeta Vertical" ---
     function restaurarDiseñoOriginal() {
         var items = elDisponibles.children;
 
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
 
-            // 1. Volver al CSS de "Tarjeta Vertical/Grid"
+            // 1. Restaurar CSS del contenedor principal
             item.className = "cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group relative";
 
-            // Restaurar el contenedor interno a columna
-            var innerDiv = item.firstElementChild;
-            if(innerDiv && innerDiv.classList.contains('flex-row')) {
+            // 2. Restaurar div interno a columna
+            var innerDiv = item.querySelector('div.flex-row');
+            if(innerDiv) {
                 innerDiv.classList.remove('flex-row', 'text-left');
                 innerDiv.classList.add('flex-col', 'text-center');
             }
 
-            // 2. ELIMINAR el Badge de número si lo tiene
+            // 3. Eliminar extras
             var badge = item.querySelector('.badge-numero');
-            if (badge) {
-                badge.remove();
-            }
+            if (badge) badge.remove();
 
-            // 3. ELIMINAR el botón de borrar si lo tiene
             var btnBorrar = item.querySelector('.btn-borrar');
-            if (btnBorrar) {
-                btnBorrar.remove();
-            }
+            if (btnBorrar) btnBorrar.remove();
         }
     }
 
-    // --- FUNCIÓN 3: Validar, Confirmar y Enviar ---
+    // --- FUNCIÓN 3: Validar y Enviar NOMBRES ---
     function validarYEnviar() {
         var items = elRanking.children;
         var titulo = document.getElementById('titulo_visible').value;
 
-        // Validaciones básicas
         if (items.length < 5) {
-            alert("⚠️ Tu ranking está incompleto. Por favor selecciona 5 equipos.");
+            alert("⚠️ Tu ranking está incompleto. Arrastra 5 equipos.");
             return;
         }
         if (!titulo) {
-            alert("⚠️ Escribe un título para tu ranking.");
+            alert("⚠️ Escribe un título.");
             return;
         }
 
-        // --- CONFIRMACIÓN ---
-        var confirmacion = confirm("¿Estás seguro de que quieres publicar este Ranking?\n\nSi aceptas, se guardará en la base de datos y volverás al inicio.");
+        // Rellenar inputs ocultos con los NOMBRES
+        for(var i=0; i<5; i++) {
+            // .dataset.id lee el atributo 'data-id' que ahora contiene el NOMBRE
+            var nombreEquipo = items[i].dataset.id;
 
-        if (confirmacion) {
-            // Rellenar input visible
-            document.getElementById('nombre_ranking_input').value = titulo;
-
-            // Rellenar inputs ocultos con los IDs de los equipos
-            for(var i=0; i<5; i++) {
-                var id = items[i].getAttribute('data-id');
-                document.getElementById('input_equipo_' + (i+1)).value = id;
+            if(!nombreEquipo) {
+                alert("Error: No se encuentra el nombre del equipo en la posición " + (i+1));
+                return;
             }
 
-            // Enviar formulario
+            document.getElementById('input_equipo_' + (i+1)).value = nombreEquipo;
+        }
+
+        // Enviar
+        if (confirm("¿Publicar ranking?")) {
+            document.getElementById('nombre_ranking_input').value = titulo;
             document.getElementById('rankingForm').submit();
         }
     }
 </script>
 
 <style>
-    /* Feedback visual al arrastrar */
-    .sortable-ghost {
-        opacity: 0.4;
-        background-color: #e0f2fe;
-        border: 2px dashed #3b82f6;
-    }
+    .sortable-ghost { opacity: 0.4; background-color: #e0f2fe; border: 2px dashed #3b82f6; }
 </style>
 {% endblock %}

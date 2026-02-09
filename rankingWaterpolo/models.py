@@ -1,17 +1,22 @@
-from django.db import models
+from djongo import models  # <--- IMPORTANTE: Usamos djongo, no django.db
 
-# 1. CATEGORIAS (Para agrupar tus equipos: ej. "División de Honor", "Liga Regional")
+
+# 1. CATEGORIAS
 class Categoria(models.Model):
+    _id = models.ObjectIdField(primary_key=True)  # <--- Añadido para Mongo
     nombre = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.nombre
 
-# 2. ELEMENTOS (Tus equipos que ya están en Mongo)
+
+# 2. ELEMENTOS (Tus equipos)
 class Team(models.Model):
+    # Definimos explícitamente el ID de Mongo para que Django lo reconozca
+    _id = models.ObjectIdField()
+
     nombre = models.CharField(max_length=100)
     escudo = models.URLField(max_length=500, blank=True, null=True)
-    # Conectamos cada equipo con una categoría
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, related_name='equipos', null=True)
     liga = models.CharField(max_length=100)
     sexo = models.CharField(max_length=20)
@@ -27,8 +32,10 @@ class Team(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.liga})"
 
-# 3. VALORACIONES (Lo que pide el maestro para puntuar los elementos/equipos)
+
+# 3. VALORACIONES
 class Valoracion(models.Model):
+    _id = models.ObjectIdField()  # <--- Añadido para Mongo
     equipo = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='valoraciones')
     puntuacion = models.IntegerField(help_text="Puntuación del 1 al 10")
     comentario = models.TextField(blank=True)
@@ -37,9 +44,12 @@ class Valoracion(models.Model):
     class Meta:
         verbose_name = "Valoración"
 
-# 4. RANKINGS (La tabla final que el profe quiere ver)
+
+# 4. RANKINGS
 class Ranking(models.Model):
-    nombre = models.CharField(max_length=100) # Ej: "Top Equipos Andalucía"
+    _id = models.ObjectIdField()  # <--- Añadido para Mongo
+    nombre = models.CharField(max_length=100)
+    # Las relaciones M2M necesitan que los modelos tengan el _id definido
     equipos = models.ManyToManyField(Team, related_name='rankings')
     temporada = models.CharField(max_length=20, default="2025/2026")
 

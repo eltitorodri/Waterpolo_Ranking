@@ -92,31 +92,63 @@ def home(request):
 
 
 # --- CREAR RANKING TOP 5 ---
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .models import Team, Ranking  # Asegúrate de importar tus modelos
+
+
 @login_required(login_url='login')
 def crear_top5(request):
+    # LÓGICA POST: Guardar
     if request.method == 'POST':
         nombre_ranking = request.POST.get('nombre_ranking')
-        ids_seleccionados = [
+
+        # 1. Ahora recibimos NOMBRES, no IDs
+        raw_nombres = [
             request.POST.get('equipo_1'),
             request.POST.get('equipo_2'),
             request.POST.get('equipo_3'),
             request.POST.get('equipo_4'),
-            request.POST.get('equipo_5'),
+            request.POST.get('equipo_5')
         ]
 
-        # Creamos el Ranking en Mongo
-        nuevo_ranking = Ranking.objects.using('mongo_db').create(
-            nombre=nombre_ranking,
-            temporada="2025/2026"
-        )
+        # 2. Limpiamos la lista
+        nombres_seleccionados = [x for x in raw_nombres if x and x != 'None' and x != '']
 
-        # Filtramos los equipos de Mongo y los añadimos a la relación ManyToMany
-        equipos_objetos = Team.objects.using('mongo_db').filter(id__in=ids_seleccionados)
-        nuevo_ranking.equipos.add(*equipos_objetos)
+        if nombres_seleccionados and nombre_ranking:
+            try:
+                # A) Crear Ranking
+                nuevo_ranking = Ranking.objects.using('mongo_db').create(
+                    nombre=nombre_ranking,
+                    temporada="2025/2026"
+                )
 
-        messages.success(request, "¡Tu Top 5 ha sido guardado en MongoDB!")
-        return redirect('home')
+                # B) BUSCAR POR NOMBRE (__in funciona perfecto con strings)
+                equipos_encontrados = list(Team.objects.using('mongo_db').filter(nombre__in=nombres_seleccionados))
 
-    # Equipos de Mongo para los selects
+                # C) Guardar relación
+                nuevo_ranking.equipos.add(*equipos_encontrados)
+                nuevo_ranking.save()
+
+                messages.success(request, "¡Ranking guardado correctamente!")
+                return redirect('mis_rankings')
+
+            except Exception as e:
+                print(f"ERROR AL GUARDAR: {e}")  # Mira la terminal si falla
+                messages.error(request, "Hubo un error al guardar el ranking.")
+        else:
+            messages.error(request, "Faltan datos (título o equipos).")
+
+    # LÓGICA GET: Mostrar formulario
     equipos = Team.objects.using('mongo_db').all().order_by('nombre')
     return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
+
+
+# --- VER MIS RANKINGS (Muro) ---
+@login_required(login_url='login')
+def mis_rankings(request):
+    # CAMBIO AQUÍ: Usa '-pk' en lugar de '-id'
+    rankings = Ranking.objects.using('mongo_db').all().order_by('-pk')
+
+    return render(request, 'rankingWaterpolo/mis_rankings.html', {'rankings': rankings})
