@@ -72,6 +72,34 @@ def logout_view(request):
 
 
 # --- HOME ---
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.db.models import Avg
+from .models import Categoria, Team, Valoracion
+
 @login_required(login_url='login')
 def home(request):
-    return render(request, 'rankingWaterpolo/home.html')
+    query = request.GET.get('q', '')
+
+    # Filtrado de categorías
+    if query:
+        categorias = Categoria.objects.filter(nombre__icontains=query)
+    else:
+        categorias = Categoria.objects.all()
+
+    # Lógica para "Mejor Valorado":
+    # Calculamos la media de 'puntuacion' de la tabla Valoracion para cada equipo
+    mejor_equipo = Team.objects.annotate(
+        media_puntos=Avg('valoraciones__puntuacion')
+    ).order_by('-media_puntos').first()
+
+    total_valoraciones = Valoracion.objects.count()
+
+    context = {
+        'categorias': categorias,
+        'query': query,
+        'mejor_equipo': mejor_equipo,
+        'total_valoraciones': total_valoraciones,
+    }
+
+    return render(request, 'rankingWaterpolo/home.html', context)

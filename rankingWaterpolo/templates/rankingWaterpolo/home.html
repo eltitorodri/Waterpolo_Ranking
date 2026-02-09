@@ -19,16 +19,24 @@
         </div>
         <div>
             <p class="text-xs text-slate-400 font-bold uppercase">Mejor Valorado</p>
-            <h3 class="text-lg font-bold text-slate-800">C.N. Atlètic-Barceloneta</h3> </div>
+            <h3 class="text-lg font-bold text-slate-800">
+                {% if mejor_equipo and mejor_equipo.media_puntos %}
+                    {{ mejor_equipo.nombre }} <span class="text-blue-500 text-sm">({{ mejor_equipo.media_puntos|floatformat:1 }}★)</span>
+                {% else %}
+                    Sin datos
+                {% endif %}
+            </h3>
+        </div>
     </div>
-    
+
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-4 hover:shadow-md transition">
         <div class="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600">
             <i class="ph ph-star text-2xl"></i>
         </div>
         <div>
             <p class="text-xs text-slate-400 font-bold uppercase">Total Valoraciones</p>
-            <h3 class="text-lg font-bold text-slate-800">1,240</h3> </div>
+            <h3 class="text-lg font-bold text-slate-800">{{ total_valoraciones }}</h3>
+        </div>
     </div>
 
     <a href="#" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-between hover:bg-blue-700 transition cursor-pointer">
@@ -40,55 +48,64 @@
     </a>
 </div>
 
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+    <form method="GET" action="{% url 'home' %}" class="relative w-full md:w-1/2">
+        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input
+            type="text"
+            name="q"
+            value="{{ query|default:'' }}"
+            placeholder="Buscar categoría (ej: Masculino, Femenino...)"
+            class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        >
+    </form>
+
+    <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+        <span class="text-xs font-bold text-slate-400 uppercase self-center mr-2">Filtros:</span>
+        <a href="?q=" class="text-xs font-bold {% if not query %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Todas</a>
+        <a href="?q=Masculino" class="text-xs font-bold {% if query == 'Masculino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Masculino</a>
+        <a href="?q=Femenino" class="text-xs font-bold {% if query == 'Femenino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Femenino</a>
+    </div>
+</div>
+
 <div class="flex items-center justify-between mb-6">
     <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
-    
+
     {% if user.is_staff %}
-    <button class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
+    <a href="/admin/rankingWaterpolo/categoria/add/" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
         <i class="ph ph-plus-circle"></i> Nueva Categoría
-    </button>
+    </a>
     {% endif %}
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    
-    <a href="#" class="block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 border border-slate-100">
-        <div class="h-32 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1530549387789-4c1017266635?q=80&w=1000&auto=format&fit=crop');">
-            <div class="w-full h-full bg-blue-900/40 flex items-end p-4">
-                <span class="bg-white text-blue-900 text-xs font-bold px-2 py-1 rounded">Equipos</span>
-            </div>
-        </div>
-        <div class="p-5">
-            <h3 class="text-lg font-bold text-slate-800 mb-1">División de Honor</h3>
-            <p class="text-sm text-slate-500 line-clamp-2">Ranking de los mejores equipos de la liga nacional.</p>
-            <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                <span class="text-xs text-slate-400">12 Elementos</span>
-                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Puntuar <i class="ph ph-caret-right"></i></span>
-            </div>
-        </div>
-    </a>
 
+    {% for cat in categorias %}
     <a href="#" class="block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 border border-slate-100">
-        <div class="h-32 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1576616839447-60a63572be46?q=80&w=1000&auto=format&fit=crop');">
-            <div class="w-full h-full bg-cyan-900/40 flex items-end p-4">
-                <span class="bg-white text-cyan-900 text-xs font-bold px-2 py-1 rounded">Jugadores</span>
-            </div>
+        <div class="h-32 bg-blue-600 flex items-center justify-center">
+            <i class="ph ph-swimming-pool text-white text-5xl opacity-50"></i>
         </div>
         <div class="p-5">
-            <h3 class="text-lg font-bold text-slate-800 mb-1">MVPs Temporada</h3>
-            <p class="text-sm text-slate-500 line-clamp-2">Vota por el jugador más valioso de la temporada actual.</p>
+            <h3 class="text-lg font-bold text-slate-800 mb-1">{{ cat.nombre }}</h3>
+            <p class="text-sm text-slate-500 line-clamp-2">Ranking de los mejores equipos de la liga {{ cat.nombre }}.</p>
             <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                <span class="text-xs text-slate-400">45 Elementos</span>
-                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Puntuar <i class="ph ph-caret-right"></i></span>
+                <span class="text-xs text-slate-400">{{ cat.equipos.all.count }} Elementos</span>
+                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Ver Ranking <i class="ph ph-caret-right"></i></span>
             </div>
         </div>
     </a>
+    {% empty %}
+    <div class="col-span-full py-12 text-center">
+        <i class="ph ph-magnifying-glass text-5xl text-slate-200 mb-4"></i>
+        <p class="text-slate-500">No hemos encontrado ninguna categoría llamada "{{ query }}".</p>
+    </div>
+    {% endfor %}
 
     {% if user.is_staff %}
-    <button class="group w-full h-full min-h-[250px] border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 transition hover:bg-blue-50/50">
+    <a href="/admin/rankingWaterpolo/categoria/add/" class="group w-full h-full min-h-[250px] border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 transition hover:bg-blue-50/50">
         <i class="ph ph-plus text-4xl mb-2 group-hover:scale-110 transition-transform"></i>
         <span class="font-bold text-sm">Añadir Categoría</span>
-    </button>
+    </a>
     {% endif %}
 
 </div>
