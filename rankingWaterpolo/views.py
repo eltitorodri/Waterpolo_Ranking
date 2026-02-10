@@ -92,10 +92,7 @@ def home(request):
 
 
 # --- CREAR RANKING TOP 5 ---
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .models import Team, Ranking
+# views.py
 
 @login_required(login_url='login')
 def crear_top5(request):
@@ -110,55 +107,132 @@ def crear_top5(request):
             request.POST.get('equipo_4'),
             request.POST.get('equipo_5')
         ]
+        # Limpiamos espacios y vacíos
         nombres_limpios = [x.strip() for x in raw_nombres if x and x.strip() != '']
 
-        # Validaciones previas
+        # --- VALIDACIÓN DE SEGURIDAD ---
+        # Si falta el título O no hay 5 equipos, paramos aquí.
         if not nombre_ranking or len(nombres_limpios) != 5:
-            messages.error(request, "Debes seleccionar 5 equipos y poner un título.")
+            messages.error(request, "⚠️ Error: Faltan datos. Asegúrate de poner título y elegir 5 equipos.")
             equipos = Team.objects.using('mongo_db').all().order_by('nombre')
             return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
 
-        # Buscamos los equipos exactos en la DB
+        # Buscamos los equipos en la DB
         equipos_db = list(Team.objects.using('mongo_db').filter(nombre__in=nombres_limpios))
 
-        # Validación: que existan los 5 equipos
         if len(equipos_db) != 5:
-            messages.error(request, "Error crítico: Algunos equipos seleccionados no existen en la base de datos.")
-            equipos = Team.objects.using('mongo_db').all().order_by('nombre')
-            return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
+            messages.error(request, "Error: Algunos equipos seleccionados no existen en la base de datos.")
+            return redirect('crear_top5')
 
         try:
-            # --- CREAR O ACTUALIZAR --- #
-            ranking_existente = Ranking.objects.using('mongo_db').filter(nombre=nombre_ranking).first()
+            # --- GUARDADO VINCULADO AL USUARIO ---
+            # Buscamos si ESTE usuario (por su ID) ya tiene un ranking con ese nombre
+            ranking_existente = Ranking.objects.using('mongo_db').filter(
+                nombre=nombre_ranking,
+                usuario_id=request.user.id  # <--- USAMOS EL ID DE SQLITE
+            ).first()
 
             if ranking_existente:
-                # Actualizamos ranking existente
+                # Actualizar existente
                 ranking_existente.equipos.set(equipos_db)
                 ranking_existente.temporada = "2025/2026"
                 ranking_existente.save()
+                messages.success(request, f"¡Has actualizado tu ranking '{nombre_ranking}'!")
             else:
-                # Creamos uno nuevo
+                # Crear nuevo
                 nuevo_ranking = Ranking.objects.using('mongo_db').create(
                     nombre=nombre_ranking,
-                    temporada="2025/2026"
+                    temporada="2025/2026",
+                    usuario_id=request.user.id  # <--- GUARDAMOS EL DUEÑO
                 )
                 nuevo_ranking.equipos.set(equipos_db)
                 nuevo_ranking.save()
+                messages.success(request, "¡Ranking creado correctamente!")
 
-            messages.success(request, "¡Tu Top 5 se ha publicado correctamente!")
             return redirect('mis_rankings')
 
         except Exception as e:
-            messages.error(request, f"Ocurrió un error al guardar el ranking: {e}")
-            equipos = Team.objects.using('mongo_db').all().order_by('nombre')
-            return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
+            print(f"Error al guardar: {e}")
+            messages.error(request, "Error interno al guardar el ranking.")
+            return redirect('crear_top5')
 
-    # --- GET --- #
+    # GET
     equipos = Team.objects.using('mongo_db').all().order_by('nombre')
     return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
 
 
+# --- MIS RANKINGS ---
 @login_required(login_url='login')
 def mis_rankings(request):
-    rankings = Ranking.objects.using('mongo_db').all().order_by('-pk')
+    # --- FILTRO DE PRIVACIDAD ---
+    # Solo traemos los rankings donde el usuario_id coincide con el del usuario conectado
+    rankings = Ranking.objects.using('mongo_db').filter(usuario_id=request.user.id).order_by('-pk')
+
     return render(request, 'rankingWaterpolo/mis_rankings.html', {'rankings': rankings})
+
+
+# views.py
+# views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Team, Valoracion
+from bson import ObjectId  # <--- 1. AÑADE ESTA LÍNEA AL PRINCIPIO
+
+
+@login_required(login_url='login')
+def valorar_equipos(request):
+    if request.method == 'POST':
+        team_id = request.POST.get('team_id')
+        puntos = request.POST.get('puntuacion')
+        comentario = request.POST.get('comentario')
+
+        if team_id and puntos:
+            try:
+                # 2. CONVERTIMOS EL TEXTO A ID DE MONGO AQUÍ:
+                mongo_id = ObjectId(team_id)
+
+                # Buscamos usando _id y el objeto convertido
+                equipo = Team.objects.using('mongo_db').get(_id=mongo_id)
+
+                # El resto sigue igual...
+                valoracion_existente = Valoracion.objects.using('mongo_db').filter(
+                    equipo=equipo,
+                    usuario_id=request.user.id
+                ).first()
+
+                if valoracion_existente:
+                    valoracion_existente.puntuacion = int(puntos)
+                    valoracion_existente.comentario = comentario
+                    valoracion_existente.save()
+                    messages.success(request, f"Has actualizado tu valoración para {equipo.nombre}")
+                else:
+                    Valoracion.objects.using('mongo_db').create(
+                        equipo=equipo,
+                        usuario_id=request.user.id,
+                        puntuacion=int(puntos),
+                        comentario=comentario
+                    )
+                    messages.success(request, f"Valoración enviada para {equipo.nombre}")
+
+            except Exception as e:
+                # Esto te ayudará a ver el error real si pasa algo más
+                messages.error(request, f"Error al guardar: {e}")
+
+        return redirect('valorar_equipos')
+
+    # Parte GET (sin cambios, solo asegúrate de importar Team y Valoracion)
+    equipos = Team.objects.using('mongo_db').all().order_by('nombre')
+
+    for equipo in equipos:
+        equipo.mi_valoracion = Valoracion.objects.using('mongo_db').filter(
+            equipo=equipo,
+            usuario_id=request.user.id
+        ).first()
+
+        if request.user.is_superuser:
+            equipo.todas_valoraciones = Valoracion.objects.using('mongo_db').filter(equipo=equipo)
+            notas = [v.puntuacion for v in equipo.todas_valoraciones]
+            equipo.media_admin = sum(notas) / len(notas) if notas else 0
+
+    return render(request, 'rankingWaterpolo/valorar_equipos.html', {'equipos': equipos})

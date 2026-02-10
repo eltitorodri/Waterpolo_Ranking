@@ -16,73 +16,102 @@
         </div>
         {% endfor %}
     </div>
-
     <script>
         setTimeout(function() {
             var alerts = document.querySelectorAll('[role="alert"]');
             alerts.forEach(function(alert) {
-                alert.style.opacity = '0'; // Desvanecer
-                setTimeout(function() { alert.remove(); }, 500); // Eliminar del DOM
+                alert.style.opacity = '0';
+                setTimeout(function() { alert.remove(); }, 500);
             });
-        }, 5000); // 5 segundos
+        }, 5000);
     </script>
 {% endif %}
+
 <div class="mb-10 text-center">
     <h1 class="text-4xl font-black text-blue-900 mb-2">
         Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
     </h1>
     <p class="text-slate-500 max-w-2xl mx-auto">
-        Explora las categorías, puntúa a tus favoritos y crea tu propio ranking personal.
-        {% if user.is_staff %}
-            <br><span class="text-amber-600 font-bold text-sm">🛠️ Tienes permisos de administrador para gestionar el sistema.</span>
-        {% endif %}
+        Gestiona tus rankings, consulta estadísticas y valora a los equipos de la liga.
     </p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-4 hover:shadow-md transition">
-        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-            <i class="ph ph-trophy text-2xl"></i>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
+        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
+            <i class="ph ph-trophy text-3xl"></i>
         </div>
         <div>
-            <p class="text-xs text-slate-400 font-bold uppercase">Mejor Valorado</p>
-            <h3 class="text-lg font-bold text-slate-800">
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Mejor Valorado</p>
+            <h3 class="text-xl font-bold text-slate-800 mt-1">
                 {% if mejor_equipo and mejor_equipo.media_puntos %}
-                    {{ mejor_equipo.nombre }} <span class="text-blue-500 text-sm">({{ mejor_equipo.media_puntos|floatformat:1 }}★)</span>
+                    {{ mejor_equipo.nombre }}
+                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-sm ml-2">
+                        <i class="ph ph-star-fill"></i> {{ mejor_equipo.media_puntos|floatformat:1 }}
+                    </span>
                 {% else %}
-                    Sin datos
+                    <span class="text-slate-400 italic">Sin datos suficientes</span>
                 {% endif %}
             </h3>
         </div>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-4 hover:shadow-md transition">
-        <div class="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600">
-            <i class="ph ph-star text-2xl"></i>
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
+        <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600 flex-shrink-0">
+            <i class="ph ph-star text-3xl"></i>
         </div>
         <div>
-            <p class="text-xs text-slate-400 font-bold uppercase">Total Valoraciones</p>
-            <h3 class="text-lg font-bold text-slate-800">{{ total_valoraciones }}</h3>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Valoraciones</p>
+            <h3 class="text-xl font-bold text-slate-800 mt-1">
+                {{ total_valoraciones|default:"0" }}
+                <span class="text-sm text-slate-400 font-normal">opiniones registradas</span>
+            </h3>
         </div>
     </div>
+</div>
 
-    <div class="flex flex-col gap-4">
-        <a href="{% url 'crear_top5' %}" class="group bg-blue-600 p-5 rounded-2xl shadow-lg shadow-blue-200 flex items-center justify-between hover:bg-blue-700 transition cursor-pointer h-full">
-            <div>
-                <p class="text-xs text-blue-200 font-bold uppercase">Nuevo</p>
-                <h3 class="text-md font-bold text-white">Crear Top 5 &rarr;</h3>
-            </div>
-            <i class="ph ph-plus-circle text-white text-2xl opacity-50"></i>
-        </a>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
 
-        <a href="{% url 'mis_rankings' %}" class="group bg-white border border-blue-100 p-5 rounded-2xl shadow-sm flex items-center justify-between hover:shadow-md transition cursor-pointer h-full">
-            <div>
-                <p class="text-xs text-slate-400 font-bold uppercase">Comunidad</p>
-                <h3 class="text-md font-bold text-slate-700">Ver Rankings</h3>
+    <a href="{% url 'crear_top5' %}" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200/50 flex flex-col justify-between hover:bg-blue-700 hover:-translate-y-1 transition duration-300">
+        <div class="flex justify-between items-start mb-4">
+            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
+                <i class="ph ph-list-numbers text-2xl"></i>
             </div>
-            <i class="ph ph-eye text-blue-600 text-2xl opacity-50 group-hover:opacity-100"></i>
-        </a>
-    </div>
+            <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-bold text-white">Crear Top 5</h3>
+            <p class="text-blue-100 text-sm">Elige tus 5 favoritos.</p>
+        </div>
+    </a>
+
+    <a href="{% url 'valorar_equipos' %}" class="group bg-amber-500 p-6 rounded-2xl shadow-lg shadow-amber-200/50 flex flex-col justify-between hover:bg-amber-600 hover:-translate-y-1 transition duration-300">
+        <div class="flex justify-between items-start mb-4">
+            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
+                <i class="ph ph-star-half text-2xl"></i>
+            </div>
+            <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-bold text-white">Valorar Equipos</h3>
+            <p class="text-amber-100 text-sm">Puntúa y comenta.</p>
+        </div>
+    </a>
+
+    <a href="{% url 'mis_rankings' %}" class="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-1 transition duration-300">
+        <div class="flex justify-between items-start mb-4">
+            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                <i class="ph ph-users text-2xl"></i>
+            </div>
+            <i class="ph ph-arrow-right text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-transform"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">Comunidad</h3>
+            <p class="text-slate-400 text-sm">Ver rankings de otros.</p>
+        </div>
+    </a>
+
 </div>
 
 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -92,7 +121,7 @@
             type="text"
             name="q"
             value="{{ query|default:'' }}"
-            placeholder="Buscar categoría (ej: Masculino, Femenino...)"
+            placeholder="Buscar categoría..."
             class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
         >
     </form>
@@ -101,49 +130,40 @@
         <span class="text-xs font-bold text-slate-400 uppercase self-center mr-2">Filtros:</span>
         <a href="?q=" class="text-xs font-bold {% if not query %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Todas</a>
         <a href="?q=Masculino" class="text-xs font-bold {% if query == 'Masculino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Masculino</a>
-        <a href="?q=Femenino" class="text-xs font-bold {% if query == 'Femenino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Femenino</a>
     </div>
 </div>
 
 <div class="flex items-center justify-between mb-6">
     <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
-
     {% if user.is_staff %}
     <a href="/admin/rankingWaterpolo/categoria/add/" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
-        <i class="ph ph-plus-circle"></i> Nueva Categoría
+        <i class="ph ph-plus-circle"></i> Nueva
     </a>
     {% endif %}
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
     {% for cat in categorias %}
     <a href="#" class="block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 border border-slate-100">
-        <div class="h-32 bg-blue-600 flex items-center justify-center">
-            <i class="ph ph-swimming-pool text-white text-5xl opacity-50"></i>
+        <div class="h-32 bg-blue-600 flex items-center justify-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-tr from-blue-900 to-transparent opacity-30"></div>
+            <i class="ph ph-swimming-pool text-white text-5xl relative z-10"></i>
         </div>
         <div class="p-5">
             <h3 class="text-lg font-bold text-slate-800 mb-1">{{ cat.nombre }}</h3>
-            <p class="text-sm text-slate-500 line-clamp-2">Ranking de los mejores equipos de la liga {{ cat.nombre }}.</p>
+            <p class="text-sm text-slate-500 line-clamp-2">Ranking de la liga {{ cat.nombre }}.</p>
             <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                <span class="text-xs text-slate-400">{{ cat.equipos.all.count }} Elementos</span>
-                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Ver Ranking <i class="ph ph-caret-right"></i></span>
+                <span class="text-xs text-slate-400">{{ cat.equipos.all.count }} Equipos</span>
+                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Ver <i class="ph ph-caret-right"></i></span>
             </div>
         </div>
     </a>
     {% empty %}
     <div class="col-span-full py-12 text-center">
         <i class="ph ph-magnifying-glass text-5xl text-slate-200 mb-4"></i>
-        <p class="text-slate-500">No hemos encontrado ninguna categoría llamada "{{ query }}".</p>
+        <p class="text-slate-500">No se encontraron categorías.</p>
     </div>
     {% endfor %}
-
-    {% if user.is_staff %}
-    <a href="/admin/rankingWaterpolo/categoria/add/" class="group w-full h-full min-h-[250px] border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-blue-400 hover:text-blue-500 transition hover:bg-blue-50/50">
-        <i class="ph ph-plus text-4xl mb-2 group-hover:scale-110 transition-transform"></i>
-        <span class="font-bold text-sm">Añadir Categoría</span>
-    </a>
-    {% endif %}
-
 </div>
+
 {% endblock %}

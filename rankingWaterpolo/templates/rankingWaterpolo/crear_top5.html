@@ -13,13 +13,14 @@
 
         <div class="max-w-xl mx-auto bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-8">
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Título del Ranking</label>
+
             <input type="text" id="titulo_visible" placeholder="Ej: Mis Favoritos de la Liga" required
+                   onkeydown="return event.key != 'Enter';"
                    class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
-            <!-- Equipos Disponibles -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
                 <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
                     <i class="ph ph-squares-four text-blue-500"></i> Equipos Disponibles
@@ -28,8 +29,7 @@
                 <div id="lista-disponibles" class="grid grid-cols-2 sm:grid-cols-3 gap-3 min-h-[200px]">
                     {% for equipo in equipos %}
                     <div class="cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group relative"
-                         data-id="{{ equipo.pk }}"
-                         data-nombre="{{ equipo.nombre }}">  <!-- ahora también guardamos nombre -->
+                         data-nombre="{{ equipo.nombre }}">
 
                         <div class="flex flex-col items-center text-center gap-2 pointer-events-none">
                             <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 border border-slate-100 shadow-sm overflow-hidden">
@@ -41,21 +41,18 @@
                             </div>
                             <span class="text-xs font-bold text-slate-700 leading-tight line-clamp-2">{{ equipo.nombre }}</span>
                         </div>
-
-                        <i class="ph ph-dots-six absolute top-2 right-2 text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none"></i>
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
-            <!-- Ranking -->
             <div class="bg-blue-50 p-6 rounded-3xl border-2 border-dashed border-blue-200 sticky top-24">
                 <h3 class="font-bold text-blue-800 mb-4 flex items-center gap-2">
                     <i class="ph ph-trophy text-amber-500"></i> Tu Top 5 Oficial
                 </h3>
                 <div class="flex flex-col gap-3">
                     <div id="lista-ranking" class="flex flex-col gap-3 min-h-[350px]">
-                    </div>
+                        </div>
 
                     <div class="text-center mt-4 text-xs text-blue-400 font-bold">
                         Arrastra aquí hasta 5 equipos
@@ -76,7 +73,6 @@
         </div>
     </div>
 
-    <!-- Formulario oculto -->
     <form method="POST" id="formularioReal" action="{% url 'crear_top5' %}" class="hidden" style="display:none;">
         {% csrf_token %}
         <input type="hidden" name="nombre_ranking" id="hidden_nombre">
@@ -93,7 +89,7 @@
 var elDisponibles = document.getElementById('lista-disponibles');
 var elRanking = document.getElementById('lista-ranking');
 
-// Lista ORIGEN
+// Configuración Sortable (Origen)
 new Sortable(elDisponibles, {
     group: { name: 'equipos', pull: true, put: true },
     animation: 150,
@@ -103,7 +99,7 @@ new Sortable(elDisponibles, {
     }
 });
 
-// Lista DESTINO
+// Configuración Sortable (Destino)
 new Sortable(elRanking, {
     group: { name: 'equipos' },
     animation: 150,
@@ -119,19 +115,23 @@ new Sortable(elRanking, {
     onRemove: actualizarRanking
 });
 
-// --- Función 1: Diseño ranking ---
+// --- Función 1: Aplicar diseño de ranking horizontal ---
 function actualizarRanking() {
     var items = elRanking.children;
     for (var i = 0; i < items.length; i++) {
         var item = items[i];
+
+        // Estilo de tarjeta horizontal
         item.className = "bg-white p-3 rounded-xl border border-blue-200 shadow-sm flex items-center gap-3 relative cursor-grab transition";
 
+        // Cambiar flex-col a flex-row
         var innerDiv = item.querySelector('div.flex-col');
         if(innerDiv) {
             innerDiv.classList.remove('flex-col', 'text-center');
             innerDiv.classList.add('flex-row', 'text-left');
         }
 
+        // Añadir medalla/número
         var badge = item.querySelector('.badge-numero');
         if (!badge) {
             badge = document.createElement('div');
@@ -146,6 +146,7 @@ function actualizarRanking() {
             badge.innerText = i + 1;
         }
 
+        // Añadir botón borrar
         if (!item.querySelector('.btn-borrar')) {
             var btnBorrar = document.createElement('i');
             btnBorrar.className = 'btn-borrar ph ph-x-circle absolute right-3 text-slate-300 hover:text-red-500 cursor-pointer text-xl transition';
@@ -159,7 +160,7 @@ function actualizarRanking() {
     }
 }
 
-// --- Función 2: Restaurar diseño ---
+// --- Función 2: Restaurar diseño vertical al volver a disponibles ---
 function restaurarDiseñoOriginal() {
     var items = elDisponibles.children;
     for (var i = 0; i < items.length; i++) {
@@ -179,12 +180,13 @@ function restaurarDiseñoOriginal() {
     }
 }
 
-// --- Función 3: Preparar envío ---
+// --- Función 3: Enviar Datos ---
 function prepararYEnviar() {
     var items = elRanking.children;
     var tituloVisible = document.getElementById('titulo_visible').value;
     var btnGuardar = document.getElementById('btnGuardarVisual');
 
+    // Validaciones
     if (items.length < 5) {
         alert("⚠️ Tu ranking está incompleto. Arrastra 5 equipos.");
         return;
@@ -195,23 +197,23 @@ function prepararYEnviar() {
     }
 
     if (confirm("¿Publicar ranking?")) {
+        // Bloquear botón para evitar doble click
         btnGuardar.disabled = true;
         btnGuardar.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> Guardando...';
 
         // 1. Título
         document.getElementById('hidden_nombre').value = tituloVisible;
 
-        // 2. Nombres de equipos (ahora sí)
+        // 2. Equipos
         for(var i=0; i<5; i++) {
             var equipoNombre = items[i].dataset.nombre;
             document.getElementById('hidden_eq' + (i+1)).value = equipoNombre;
         }
 
-        // 3. Enviar formulario
+        // 3. Enviar form oculto
         document.getElementById('formularioReal').submit();
     }
 }
-
 </script>
 
 <style>
