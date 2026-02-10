@@ -1,4 +1,6 @@
 {% extends 'rankingWaterpolo/base.html' %}
+{% load static %}
+
 {% block content %}
 
 {% if messages %}
@@ -37,7 +39,6 @@
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
         <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
             <i class="ph ph-trophy text-3xl"></i>
@@ -81,8 +82,8 @@
             <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
         </div>
         <div>
-            <h3 class="text-lg font-bold text-white">Crear Top 5</h3>
-            <p class="text-blue-100 text-sm">Elige tus 5 favoritos.</p>
+            <h3 class="text-lg font-bold text-white">Ranking Rápido</h3>
+            <p class="text-blue-100 text-sm">Crea un Top 5 general.</p>
         </div>
     </a>
 
@@ -107,8 +108,8 @@
             <i class="ph ph-arrow-right text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-transform"></i>
         </div>
         <div>
-            <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">Comunidad</h3>
-            <p class="text-slate-400 text-sm">Ver rankings de otros.</p>
+            <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">Mis Rankings</h3>
+            <p class="text-slate-400 text-sm">Consulta tu historial.</p>
         </div>
     </a>
 
@@ -136,33 +137,55 @@
 <div class="flex items-center justify-between mb-6">
     <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
     {% if user.is_staff %}
-    <a href="/admin/rankingWaterpolo/categoria/add/" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
+    <a href="{% url 'crear_categoria' %}" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
         <i class="ph ph-plus-circle"></i> Nueva
     </a>
     {% endif %}
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {% for cat in categorias %}
-    <a href="#" class="block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300 border border-slate-100">
-        <div class="h-32 bg-blue-600 flex items-center justify-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-gradient-to-tr from-blue-900 to-transparent opacity-30"></div>
-            <i class="ph ph-swimming-pool text-white text-5xl relative z-10"></i>
+
+    <a href="{% url 'crear_ranking_categoria' cat.pk %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col h-full">
+
+        <div class="h-32 bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden relative">
+            {% if cat.imagen %}
+                <img src="{{ cat.imagen.url }}" alt="{{ cat.nombre }}" class="w-full h-full object-cover">
+            {% else %}
+                <i class="ph ph-trophy text-4xl text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-transform duration-300"></i>
+            {% endif %}
         </div>
-        <div class="p-5">
-            <h3 class="text-lg font-bold text-slate-800 mb-1">{{ cat.nombre }}</h3>
-            <p class="text-sm text-slate-500 line-clamp-2">Ranking de la liga {{ cat.nombre }}.</p>
+
+        <div class="p-5 flex-1 flex flex-col justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                    {{ cat.nombre }}
+                </h3>
+                <p class="text-sm text-slate-500 line-clamp-2">
+                    {% if cat.temporada %}Temporada {{ cat.temporada }}{% else %}Liga Regular{% endif %}
+                </p>
+            </div>
+
             <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                <span class="text-xs text-slate-400">{{ cat.equipos.all.count }} Equipos</span>
-                <span class="text-blue-600 text-xs font-bold flex items-center gap-1">Ver <i class="ph ph-caret-right"></i></span>
+                <span class="text-xs text-slate-400 font-medium">
+                    <i class="ph ph-users"></i> {{ cat.equipos.all.count }} Equipos
+                </span>
+                <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">
+                    Crear Ranking <i class="ph ph-caret-right"></i>
+                </span>
             </div>
         </div>
     </a>
+
     {% empty %}
     <div class="col-span-full py-12 text-center">
-        <i class="ph ph-magnifying-glass text-5xl text-slate-200 mb-4"></i>
-        <p class="text-slate-500">No se encontraron categorías.</p>
+        <div class="bg-slate-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <i class="ph ph-magnifying-glass text-3xl text-slate-300"></i>
+        </div>
+        <p class="text-slate-600 font-medium">No se encontraron categorías.</p>
+        <p class="text-slate-400 text-sm">Intenta otra búsqueda.</p>
     </div>
+
     {% endfor %}
 </div>
 

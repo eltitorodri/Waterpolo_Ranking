@@ -1,30 +1,44 @@
 from djongo import models
-from .models import Team # Asegúrate de importar Team
+from django.contrib.auth.models import User
 
-# 1. CATEGORIAS (Modificado)
+
 class Categoria(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
-    # AÑADIDO: Relación muchos a muchos. Una categoría tiene muchos equipos.
-    equipos = models.ManyToManyField(Team, related_name='categorias_asignadas')
+
+    # --- NUEVOS CAMPOS ---
+    temporada = models.CharField(
+        max_length=50,
+        default="2024/25",
+        verbose_name="Temporada"
+    )
+    imagen = models.ImageField(
+        upload_to='categorias/',
+        null=True,
+        blank=True,
+        verbose_name="Logo/Imagen"
+    )
+    # ---------------------
+
+    equipos = models.ManyToManyField('Team', related_name='categorias_asignadas')
 
     def __str__(self):
         return self.nombre
 
-
-# 2. ELEMENTOS (Tus equipos)
+# --- 2. EQUIPOS (Team) ---
 class Team(models.Model):
-    # Definimos explícitamente el ID de Mongo para que Django lo reconozca
-    _id = models.ObjectIdField()
-
+    _id = models.ObjectIdField(primary_key=True)  # Asegúrate de que tenga primary_key=True para evitar líos
     nombre = models.CharField(max_length=100)
     escudo = models.URLField(max_length=500, blank=True, null=True)
-    categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, related_name='equipos', null=True)
+
+    # Aquí también usamos 'Categoria' con comillas por coherencia
+    categoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, related_name='equipos_originales', null=True)
+
     liga = models.CharField(max_length=100)
     sexo = models.CharField(max_length=20)
-    entrenador = models.CharField(max_length=100)
-    piscina = models.CharField(max_length=100)
-    ciudad = models.CharField(max_length=100)
+    entrenador = models.CharField(max_length=100, blank=True, null=True)
+    piscina = models.CharField(max_length=100, blank=True, null=True)
+    ciudad = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         db_table = 'equipos'
@@ -35,20 +49,14 @@ class Team(models.Model):
         return f"{self.nombre} ({self.liga})"
 
 
-# models.py
-from djongo import models
-from .models import Team  # Asegúrate de importar Team
-
-
+# --- 3. VALORACIONES ---
 class Valoracion(models.Model):
     _id = models.ObjectIdField(primary_key=True)
 
-    # Vinculamos al equipo
-    equipo = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='valoraciones')
-
-    # Vinculamos al usuario (Usamos ID numérico para evitar líos entre SQLite y Mongo)
+    # Aquí ya podemos usar Team sin comillas porque Team está definido arriba,
+    # pero ponerlas tampoco hace daño.
+    equipo = models.ForeignKey('Team', on_delete=models.CASCADE, related_name='valoraciones')
     usuario_id = models.IntegerField()
-
     puntuacion = models.IntegerField(help_text="Puntuación del 1 al 10")
     comentario = models.TextField(blank=True)
     fecha = models.DateTimeField(auto_now_add=True)
@@ -60,32 +68,23 @@ class Valoracion(models.Model):
         return f"Valoración de {self.equipo.nombre}: {self.puntuacion}"
 
 
-# models.py
-
-import uuid  # <--- 1. AÑADE ESTA IMPORTACIÓN ARRIBA DEL TODO
-from djongo import models
-from django.contrib.auth.models import User
-
-
-# ... (Categoria y Team déjalos EXACTAMENTE COMO ESTABAN, con su ObjectId) ...
-# Solo cambiamos el Ranking
-
-# 4. RANKINGS
+# --- 4. RANKINGS ---
 class Ranking(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    # AÑADIDO: Para saber de qué es este ranking (puede ser null si es un ranking general)
-    categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Relación con Categoria
+    categoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, null=True, blank=True)
 
     nombre = models.CharField(max_length=100, default="Mi Top 5")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    # Tus campos de posiciones...
-    posicion_1 = models.ForeignKey(Team, related_name='r_pos1', on_delete=models.CASCADE)
-    posicion_2 = models.ForeignKey(Team, related_name='r_pos2', on_delete=models.CASCADE)
-    posicion_3 = models.ForeignKey(Team, related_name='r_pos3', on_delete=models.CASCADE)
-    posicion_4 = models.ForeignKey(Team, related_name='r_pos4', on_delete=models.CASCADE)
-    posicion_5 = models.ForeignKey(Team, related_name='r_pos5', on_delete=models.CASCADE)
+    # Posiciones (Relación con Team)
+    posicion_1 = models.ForeignKey('Team', related_name='r_pos1', on_delete=models.CASCADE)
+    posicion_2 = models.ForeignKey('Team', related_name='r_pos2', on_delete=models.CASCADE)
+    posicion_3 = models.ForeignKey('Team', related_name='r_pos3', on_delete=models.CASCADE)
+    posicion_4 = models.ForeignKey('Team', related_name='r_pos4', on_delete=models.CASCADE)
+    posicion_5 = models.ForeignKey('Team', related_name='r_pos5', on_delete=models.CASCADE)
 
     def __str__(self):
         cat_nombre = self.categoria.nombre if self.categoria else "General"

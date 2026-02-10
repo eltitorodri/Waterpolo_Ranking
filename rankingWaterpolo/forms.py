@@ -18,3 +18,24 @@ class ValoracionForm(forms.ModelForm):
         # Ajustes específicos
         self.fields['puntuacion'].widget.attrs.update({'min': '1', 'max': '10', 'placeholder': 'Puntúa de 1 a 10'})
         self.fields['comentario'].widget.attrs.update({'rows': '3', 'placeholder': '¿Por qué esta nota?'})
+
+from django import forms
+from .models import Categoria
+
+class CategoriaForm(forms.ModelForm):
+    class Meta:
+        model = Categoria
+        fields = ['nombre', 'temporada', 'imagen'] # Añade los campos que tenga tu modelo
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition',
+                'placeholder': 'Ej: División de Honor Masculina'
+            }),
+            'temporada': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition',
+                'placeholder': 'Ej: 2024/25'
+            }),
+            'imagen': forms.FileInput(attrs={
+                'class': 'w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition'
+            }),
+        }
