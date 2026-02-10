@@ -9,15 +9,7 @@
         <p class="text-slate-500">Arrastra los equipos desde la lista de disponibles hacia tu Ranking.</p>
     </div>
 
-    <form method="POST" id="rankingForm" class="space-y-6">
-        {% csrf_token %}
-
-        <input type="hidden" name="nombre_ranking" id="nombre_ranking_input">
-        <input type="hidden" name="equipo_1" id="input_equipo_1">
-        <input type="hidden" name="equipo_2" id="input_equipo_2">
-        <input type="hidden" name="equipo_3" id="input_equipo_3">
-        <input type="hidden" name="equipo_4" id="input_equipo_4">
-        <input type="hidden" name="equipo_5" id="input_equipo_5">
+    <div class="space-y-6">
 
         <div class="max-w-xl mx-auto bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-8">
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Título del Ranking</label>
@@ -27,6 +19,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
+            <!-- Equipos Disponibles -->
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
                 <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
                     <i class="ph ph-squares-four text-blue-500"></i> Equipos Disponibles
@@ -35,7 +28,8 @@
                 <div id="lista-disponibles" class="grid grid-cols-2 sm:grid-cols-3 gap-3 min-h-[200px]">
                     {% for equipo in equipos %}
                     <div class="cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group relative"
-                         data-id="{{ equipo.nombre }}">
+                         data-id="{{ equipo.pk }}"
+                         data-nombre="{{ equipo.nombre }}">  <!-- ahora también guardamos nombre -->
 
                         <div class="flex flex-col items-center text-center gap-2 pointer-events-none">
                             <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 border border-slate-100 shadow-sm overflow-hidden">
@@ -54,13 +48,14 @@
                 </div>
             </div>
 
+            <!-- Ranking -->
             <div class="bg-blue-50 p-6 rounded-3xl border-2 border-dashed border-blue-200 sticky top-24">
                 <h3 class="font-bold text-blue-800 mb-4 flex items-center gap-2">
                     <i class="ph ph-trophy text-amber-500"></i> Tu Top 5 Oficial
                 </h3>
                 <div class="flex flex-col gap-3">
                     <div id="lista-ranking" class="flex flex-col gap-3 min-h-[350px]">
-                        </div>
+                    </div>
 
                     <div class="text-center mt-4 text-xs text-blue-400 font-bold">
                         Arrastra aquí hasta 5 equipos
@@ -68,7 +63,8 @@
                 </div>
 
                 <div class="mt-8 flex gap-3">
-                    <button type="button" onclick="validarYEnviar()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                    <button type="button" onclick="prepararYEnviar()" id="btnGuardarVisual"
+                            class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
                         <i class="ph ph-check-circle text-xl"></i> Guardar Ranking
                     </button>
                     <a href="{% url 'home' %}" class="px-6 py-3 bg-white text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition border border-slate-200">
@@ -78,150 +74,151 @@
             </div>
 
         </div>
+    </div>
+
+    <!-- Formulario oculto -->
+    <form method="POST" id="formularioReal" action="{% url 'crear_top5' %}" class="hidden" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" name="nombre_ranking" id="hidden_nombre">
+        <input type="hidden" name="equipo_1" id="hidden_eq1">
+        <input type="hidden" name="equipo_2" id="hidden_eq2">
+        <input type="hidden" name="equipo_3" id="hidden_eq3">
+        <input type="hidden" name="equipo_4" id="hidden_eq4">
+        <input type="hidden" name="equipo_5" id="hidden_eq5">
     </form>
+
 </div>
 
 <script>
-    var elDisponibles = document.getElementById('lista-disponibles');
-    var elRanking = document.getElementById('lista-ranking');
+var elDisponibles = document.getElementById('lista-disponibles');
+var elRanking = document.getElementById('lista-ranking');
 
-    // 1. Configurar lista ORIGEN (Disponibles)
-    new Sortable(elDisponibles, {
-        group: { name: 'equipos', pull: true, put: true },
-        animation: 150,
-        sort: false,
-        onSort: function (evt) {
-            // Si devolvemos algo aquí, restauramos su estilo original
-            restaurarDiseñoOriginal();
+// Lista ORIGEN
+new Sortable(elDisponibles, {
+    group: { name: 'equipos', pull: true, put: true },
+    animation: 150,
+    sort: false,
+    onSort: function(evt) {
+        restaurarDiseñoOriginal();
+    }
+});
+
+// Lista DESTINO
+new Sortable(elRanking, {
+    group: { name: 'equipos' },
+    animation: 150,
+    onAdd: function(evt) {
+        if (elRanking.children.length > 5) {
+            elDisponibles.appendChild(evt.item);
+            alert("⚠️ ¡El Top 5 está completo! Quita uno antes de añadir otro.");
         }
-    });
+        actualizarRanking();
+        restaurarDiseñoOriginal();
+    },
+    onSort: actualizarRanking,
+    onRemove: actualizarRanking
+});
 
-    // 2. Configurar lista DESTINO (Ranking)
-    new Sortable(elRanking, {
-        group: { name: 'equipos' },
-        animation: 150,
-        onAdd: function (evt) {
-            // Límite de 5
-            if (elRanking.children.length > 5) {
-                elDisponibles.appendChild(evt.item);
-                alert("⚠️ ¡El Top 5 está completo! Quita uno antes de añadir otro.");
-            }
-            actualizarRanking(); // Cambia a diseño horizontal
-            restaurarDiseñoOriginal(); // Asegura que la izquierda esté limpia
-        },
-        onSort: actualizarRanking, // Reordena números
-        onRemove: actualizarRanking // Reordena si sacamos uno
-    });
+// --- Función 1: Diseño ranking ---
+function actualizarRanking() {
+    var items = elRanking.children;
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        item.className = "bg-white p-3 rounded-xl border border-blue-200 shadow-sm flex items-center gap-3 relative cursor-grab transition";
 
-    // --- FUNCIÓN 1: Transforma la tarjeta a modo "Fila Horizontal" ---
-    function actualizarRanking() {
-        var items = elRanking.children;
+        var innerDiv = item.querySelector('div.flex-col');
+        if(innerDiv) {
+            innerDiv.classList.remove('flex-col', 'text-center');
+            innerDiv.classList.add('flex-row', 'text-left');
+        }
 
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
+        var badge = item.querySelector('.badge-numero');
+        if (!badge) {
+            badge = document.createElement('div');
+            item.prepend(badge);
+        }
 
-            // 1. Cambiamos el CSS del contenedor principal
-            item.className = "bg-white p-3 rounded-xl border border-blue-200 shadow-sm flex items-center gap-3 relative cursor-grab transition";
+        if (i === 0) {
+            badge.className = 'badge-numero w-8 h-8 flex-none rounded-full flex items-center justify-center font-black text-white text-sm mr-2 bg-amber-400 shadow-amber-200 shadow-md';
+            badge.innerHTML = '<i class="ph ph-crown"></i>';
+        } else {
+            badge.className = 'badge-numero w-8 h-8 flex-none rounded-full flex items-center justify-center font-black text-white text-sm mr-2 bg-blue-600';
+            badge.innerText = i + 1;
+        }
 
-            // 2. Buscamos el div interno (donde está img y texto) para ponerlo en fila
-            var innerDiv = item.querySelector('div.flex-col');
-            if(innerDiv) {
-                innerDiv.classList.remove('flex-col', 'text-center');
-                innerDiv.classList.add('flex-row', 'text-left');
-            }
-
-            // 3. Añadir/Actualizar Badge de número
-            var badge = item.querySelector('.badge-numero');
-            if (!badge) {
-                badge = document.createElement('div');
-                item.prepend(badge);
-            }
-
-            if (i === 0) {
-                badge.className = 'badge-numero w-8 h-8 flex-none rounded-full flex items-center justify-center font-black text-white text-sm mr-2 bg-amber-400 shadow-amber-200 shadow-md';
-                badge.innerHTML = '<i class="ph ph-crown"></i>';
-            } else {
-                badge.className = 'badge-numero w-8 h-8 flex-none rounded-full flex items-center justify-center font-black text-white text-sm mr-2 bg-blue-600';
-                badge.innerText = i + 1;
-            }
-
-            // 4. Botón de borrar (X)
-            if (!item.querySelector('.btn-borrar')) {
-                var btnBorrar = document.createElement('i');
-                btnBorrar.className = 'btn-borrar ph ph-x-circle absolute right-3 text-slate-300 hover:text-red-500 cursor-pointer text-xl transition';
-                btnBorrar.onclick = function() {
-                    var tarjeta = this.parentElement;
-                    elDisponibles.appendChild(tarjeta);
-                    restaurarDiseñoOriginal();
-                    actualizarRanking();
-                };
-                item.appendChild(btnBorrar);
-            }
+        if (!item.querySelector('.btn-borrar')) {
+            var btnBorrar = document.createElement('i');
+            btnBorrar.className = 'btn-borrar ph ph-x-circle absolute right-3 text-slate-300 hover:text-red-500 cursor-pointer text-xl transition';
+            btnBorrar.onclick = function() {
+                elDisponibles.appendChild(this.parentElement);
+                restaurarDiseñoOriginal();
+                actualizarRanking();
+            };
+            item.appendChild(btnBorrar);
         }
     }
+}
 
-    // --- FUNCIÓN 2: Restaura el diseño a "Tarjeta Vertical" ---
-    function restaurarDiseñoOriginal() {
-        var items = elDisponibles.children;
+// --- Función 2: Restaurar diseño ---
+function restaurarDiseñoOriginal() {
+    var items = elDisponibles.children;
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        item.className = "cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group relative";
 
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-
-            // 1. Restaurar CSS del contenedor principal
-            item.className = "cursor-grab active:cursor-grabbing bg-slate-50 hover:bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group relative";
-
-            // 2. Restaurar div interno a columna
-            var innerDiv = item.querySelector('div.flex-row');
-            if(innerDiv) {
-                innerDiv.classList.remove('flex-row', 'text-left');
-                innerDiv.classList.add('flex-col', 'text-center');
-            }
-
-            // 3. Eliminar extras
-            var badge = item.querySelector('.badge-numero');
-            if (badge) badge.remove();
-
-            var btnBorrar = item.querySelector('.btn-borrar');
-            if (btnBorrar) btnBorrar.remove();
+        var innerDiv = item.querySelector('div.flex-row');
+        if(innerDiv) {
+            innerDiv.classList.remove('flex-row', 'text-left');
+            innerDiv.classList.add('flex-col', 'text-center');
         }
+
+        var badge = item.querySelector('.badge-numero');
+        if (badge) badge.remove();
+        var btnBorrar = item.querySelector('.btn-borrar');
+        if (btnBorrar) btnBorrar.remove();
+    }
+}
+
+// --- Función 3: Preparar envío ---
+function prepararYEnviar() {
+    var items = elRanking.children;
+    var tituloVisible = document.getElementById('titulo_visible').value;
+    var btnGuardar = document.getElementById('btnGuardarVisual');
+
+    if (items.length < 5) {
+        alert("⚠️ Tu ranking está incompleto. Arrastra 5 equipos.");
+        return;
+    }
+    if (!tituloVisible || tituloVisible.trim() === "") {
+        alert("⚠️ Escribe un título para tu ranking.");
+        return;
     }
 
-    // --- FUNCIÓN 3: Validar y Enviar NOMBRES ---
-    function validarYEnviar() {
-        var items = elRanking.children;
-        var titulo = document.getElementById('titulo_visible').value;
+    if (confirm("¿Publicar ranking?")) {
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> Guardando...';
 
-        if (items.length < 5) {
-            alert("⚠️ Tu ranking está incompleto. Arrastra 5 equipos.");
-            return;
-        }
-        if (!titulo) {
-            alert("⚠️ Escribe un título.");
-            return;
-        }
+        // 1. Título
+        document.getElementById('hidden_nombre').value = tituloVisible;
 
-        // Rellenar inputs ocultos con los NOMBRES
+        // 2. Nombres de equipos (ahora sí)
         for(var i=0; i<5; i++) {
-            // .dataset.id lee el atributo 'data-id' que ahora contiene el NOMBRE
-            var nombreEquipo = items[i].dataset.id;
-
-            if(!nombreEquipo) {
-                alert("Error: No se encuentra el nombre del equipo en la posición " + (i+1));
-                return;
-            }
-
-            document.getElementById('input_equipo_' + (i+1)).value = nombreEquipo;
+            var equipoNombre = items[i].dataset.nombre;
+            document.getElementById('hidden_eq' + (i+1)).value = equipoNombre;
         }
 
-        // Enviar
-        if (confirm("¿Publicar ranking?")) {
-            document.getElementById('nombre_ranking_input').value = titulo;
-            document.getElementById('rankingForm').submit();
-        }
+        // 3. Enviar formulario
+        document.getElementById('formularioReal').submit();
     }
+}
+
 </script>
 
 <style>
-    .sortable-ghost { opacity: 0.4; background-color: #e0f2fe; border: 2px dashed #3b82f6; }
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #e0f2fe;
+    border: 2px dashed #3b82f6;
+}
 </style>
 {% endblock %}

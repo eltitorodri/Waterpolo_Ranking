@@ -93,18 +93,16 @@ def home(request):
 
 # --- CREAR RANKING TOP 5 ---
 from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import Team, Ranking  # Asegúrate de importar tus modelos
-
+from django.contrib import messages
+from .models import Team, Ranking
 
 @login_required(login_url='login')
 def crear_top5(request):
-    # LÓGICA POST: Guardar
     if request.method == 'POST':
         nombre_ranking = request.POST.get('nombre_ranking')
 
-        # 1. Ahora recibimos NOMBRES, no IDs
+        # Recogemos los nombres de los equipos
         raw_nombres = [
             request.POST.get('equipo_1'),
             request.POST.get('equipo_2'),
@@ -112,43 +110,55 @@ def crear_top5(request):
             request.POST.get('equipo_4'),
             request.POST.get('equipo_5')
         ]
+        nombres_limpios = [x.strip() for x in raw_nombres if x and x.strip() != '']
 
-        # 2. Limpiamos la lista
-        nombres_seleccionados = [x for x in raw_nombres if x and x != 'None' and x != '']
+        # Validaciones previas
+        if not nombre_ranking or len(nombres_limpios) != 5:
+            messages.error(request, "Debes seleccionar 5 equipos y poner un título.")
+            equipos = Team.objects.using('mongo_db').all().order_by('nombre')
+            return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
 
-        if nombres_seleccionados and nombre_ranking:
-            try:
-                # A) Crear Ranking
+        # Buscamos los equipos exactos en la DB
+        equipos_db = list(Team.objects.using('mongo_db').filter(nombre__in=nombres_limpios))
+
+        # Validación: que existan los 5 equipos
+        if len(equipos_db) != 5:
+            messages.error(request, "Error crítico: Algunos equipos seleccionados no existen en la base de datos.")
+            equipos = Team.objects.using('mongo_db').all().order_by('nombre')
+            return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
+
+        try:
+            # --- CREAR O ACTUALIZAR --- #
+            ranking_existente = Ranking.objects.using('mongo_db').filter(nombre=nombre_ranking).first()
+
+            if ranking_existente:
+                # Actualizamos ranking existente
+                ranking_existente.equipos.set(equipos_db)
+                ranking_existente.temporada = "2025/2026"
+                ranking_existente.save()
+            else:
+                # Creamos uno nuevo
                 nuevo_ranking = Ranking.objects.using('mongo_db').create(
                     nombre=nombre_ranking,
                     temporada="2025/2026"
                 )
-
-                # B) BUSCAR POR NOMBRE (__in funciona perfecto con strings)
-                equipos_encontrados = list(Team.objects.using('mongo_db').filter(nombre__in=nombres_seleccionados))
-
-                # C) Guardar relación
-                nuevo_ranking.equipos.add(*equipos_encontrados)
+                nuevo_ranking.equipos.set(equipos_db)
                 nuevo_ranking.save()
 
-                messages.success(request, "¡Ranking guardado correctamente!")
-                return redirect('mis_rankings')
+            messages.success(request, "¡Tu Top 5 se ha publicado correctamente!")
+            return redirect('mis_rankings')
 
-            except Exception as e:
-                print(f"ERROR AL GUARDAR: {e}")  # Mira la terminal si falla
-                messages.error(request, "Hubo un error al guardar el ranking.")
-        else:
-            messages.error(request, "Faltan datos (título o equipos).")
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error al guardar el ranking: {e}")
+            equipos = Team.objects.using('mongo_db').all().order_by('nombre')
+            return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
 
-    # LÓGICA GET: Mostrar formulario
+    # --- GET --- #
     equipos = Team.objects.using('mongo_db').all().order_by('nombre')
     return render(request, 'rankingWaterpolo/crear_top5.html', {'equipos': equipos})
 
 
-# --- VER MIS RANKINGS (Muro) ---
 @login_required(login_url='login')
 def mis_rankings(request):
-    # CAMBIO AQUÍ: Usa '-pk' en lugar de '-id'
     rankings = Ranking.objects.using('mongo_db').all().order_by('-pk')
-
     return render(request, 'rankingWaterpolo/mis_rankings.html', {'rankings': rankings})
