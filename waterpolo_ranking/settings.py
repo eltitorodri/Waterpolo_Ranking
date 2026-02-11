@@ -132,3 +132,9 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 
 DATABASE_ROUTERS = ['waterpolo_ranking.routers.MongoRouter']
+
+import os
+
+# Donde se guardarán físicamente las fotos
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

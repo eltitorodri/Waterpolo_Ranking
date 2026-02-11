@@ -84,26 +84,29 @@ def home(request):
 
 # --- 3. RANKINGS (Nuevo sistema con Categorías) ---
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Categoria, Team, Ranking
+from bson import ObjectId
+
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
-    # Determinar contexto (General o Categoría específica)
     categoria_obj = None
     equipos = []
 
+    # Categoría o general
     if categoria_id:
         try:
             mongo_id = ObjectId(categoria_id)
             categoria_obj = Categoria.objects.using('mongo_db').get(_id=mongo_id)
-            # Solo cogemos los equipos de esta categoría
             equipos = categoria_obj.equipos.all()
         except Categoria.DoesNotExist:
             messages.error(request, "Categoría no encontrada.")
             return redirect('home')
     else:
-        # Ranking General (Todos los equipos)
         equipos = Team.objects.using('mongo_db').all()
 
-    # Procesar Formulario
     if request.method == 'POST':
         p1 = request.POST.get('posicion_1')
         p2 = request.POST.get('posicion_2')
@@ -113,26 +116,27 @@ def crear_ranking(request, categoria_id=None):
         titulo = request.POST.get('titulo')
 
         if p1 and p2 and p3 and p4 and p5:
-            # Creamos el ranking
-            nuevo_ranking = Ranking(
-                user=request.user,
+            # Guardamos como strings (ObjectId en string)
+            nuevo_ranking = Ranking.objects.using('mongo_db').create(
+                user_id=request.user.id,
+                username=request.user.username,
                 categoria=categoria_obj,
-                nombre=titulo if titulo else (f"Top 5 {categoria_obj.nombre}" if categoria_obj else "Top 5 General"),
-                posicion_1_id=p1,
-                posicion_2_id=p2,
-                posicion_3_id=p3,
-                posicion_4_id=p4,
-                posicion_5_id=p5
+                nombre=titulo if titulo else (
+                    f"Top 5 {categoria_obj.nombre}" if categoria_obj else "Top 5 General"
+                ),
+                posicion_1_id=str(p1),
+                posicion_2_id=str(p2),
+                posicion_3_id=str(p3),
+                posicion_4_id=str(p4),
+                posicion_5_id=str(p5)
             )
-            # IMPORTANTE: Guardar en mongo_db
-            nuevo_ranking.save(using='mongo_db')
 
             messages.success(request, "¡Ranking creado con éxito!")
             return redirect('mis_rankings')
         else:
             messages.error(request, "Por favor selecciona los 5 equipos.")
 
-    return render(request, 'rankingWaterpolo/crear_ranking.html', {
+    return render(request, 'rankingWaterpolo/crear_top5.html', {
         'equipos': equipos,
         'categoria': categoria_obj
     })
@@ -140,8 +144,14 @@ def crear_ranking(request, categoria_id=None):
 
 @login_required(login_url='login')
 def mis_rankings(request):
-    rankings = Ranking.objects.using('mongo_db').filter(user=request.user).order_by('-fecha_creacion')
-    return render(request, 'rankingWaterpolo/mis_rankings.html', {'rankings': rankings})
+    # Filtramos por user_id
+    rankings = Ranking.objects.using('mongo_db') \
+        .filter(user_id=request.user.id) \
+        .order_by('-fecha_creacion')
+
+    return render(request, 'rankingWaterpolo/mis_rankings.html', {
+        'rankings': rankings
+    })
 
 
 # --- 4. VALORACIONES (Con corrección de ObjectId) ---
@@ -196,14 +206,30 @@ def valorar_equipos(request):
 from django.contrib.admin.views.decorators import staff_member_required
 from .forms import CategoriaForm # Asegúrate de importar el form
 
+
 @staff_member_required(login_url='home')
 def crear_categoria(request):
     if request.method == 'POST':
         form = CategoriaForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            messages.success(request, '¡Categoría creada con éxito!')
-            return redirect('home')
+            try:
+                # 1. Guardar datos básicos de la categoría
+                categoria = form.save(commit=False)
+                categoria.save(using='mongo_db')
+
+                # 2. Gestionar los equipos
+                team_ids = form.cleaned_data.get('equipos')
+                if team_ids:
+                    # Buscamos los equipos reales en Mongo usando los IDs recibidos
+                    equipos_qs = Team.objects.using('mongo_db').filter(pk__in=team_ids)
+                    categoria.equipos.set(equipos_qs)
+
+                messages.success(request, '¡Categoría creada con éxito!')
+                return redirect('home')
+            except Exception as e:
+                messages.error(request, f"Error al guardar: {e}")
+        else:
+            print(f"Errores del formulario: {form.errors}")
     else:
         form = CategoriaForm()
 

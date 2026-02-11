@@ -69,23 +69,27 @@ class Valoracion(models.Model):
 
 
 # --- 4. RANKINGS ---
+from djongo import models
+from django.contrib.auth.models import User
+
 class Ranking(models.Model):
     _id = models.ObjectIdField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    # Relación con Categoria
+    user_id = models.IntegerField()
+    username = models.CharField(max_length=150)
+
     categoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, null=True, blank=True)
 
     nombre = models.CharField(max_length=100, default="Mi Top 5")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    # Posiciones (Relación con Team)
-    posicion_1 = models.ForeignKey('Team', related_name='r_pos1', on_delete=models.CASCADE)
-    posicion_2 = models.ForeignKey('Team', related_name='r_pos2', on_delete=models.CASCADE)
-    posicion_3 = models.ForeignKey('Team', related_name='r_pos3', on_delete=models.CASCADE)
-    posicion_4 = models.ForeignKey('Team', related_name='r_pos4', on_delete=models.CASCADE)
-    posicion_5 = models.ForeignKey('Team', related_name='r_pos5', on_delete=models.CASCADE)
+    # Guardamos el ObjectId de los equipos directamente como strings
+    posicion_1_id = models.CharField(max_length=24)
+    posicion_2_id = models.CharField(max_length=24)
+    posicion_3_id = models.CharField(max_length=24)
+    posicion_4_id = models.CharField(max_length=24)
+    posicion_5_id = models.CharField(max_length=24)
 
     def __str__(self):
         cat_nombre = self.categoria.nombre if self.categoria else "General"
-        return f"{self.user.username} - {cat_nombre}"
+        return f"{self.username} - {cat_nombre}"
