@@ -84,30 +84,43 @@ def home(request):
 
 # --- 3. RANKINGS (Nuevo sistema con Categorías) ---
 
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from .models import Categoria, Team, Ranking
-from bson import ObjectId
-
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
     categoria_obj = None
     equipos = []
 
-    # Categoría o general
     if categoria_id:
         try:
             mongo_id = ObjectId(categoria_id)
             categoria_obj = Categoria.objects.using('mongo_db').get(_id=mongo_id)
-            equipos = categoria_obj.equipos.all()
-        except Categoria.DoesNotExist:
+
+            # --- ESTRATEGIA DE RECUPERACIÓN PARA MONGODB ---
+
+            # Intento 1: Buscar equipos que tengan asignada esta categoría (ForeignKey)
+            equipos_por_fk = Team.objects.using('mongo_db').filter(categoria=categoria_obj)
+
+            # Intento 2: Buscar equipos asociados a través del ManyToMany de la categoría
+            # Usamos list() para forzar a Djongo a traer los datos de la colección
+            equipos_por_m2m = categoria_obj.equipos.all().using('mongo_db')
+
+            # Combinamos ambos resultados y eliminamos duplicados
+            # Convertimos a lista para que el template pueda iterar sin problemas
+            equipos = list(set(list(equipos_por_fk) + list(equipos_por_m2m)))
+
+            # Ordenamos por nombre para que no salgan aleatorios
+            equipos.sort(key=lambda x: x.nombre)
+
+        except Exception as e:
+            print(f"Error recuperando equipos: {e}")
             messages.error(request, "Categoría no encontrada.")
             return redirect('home')
     else:
-        equipos = Team.objects.using('mongo_db').all()
+        # Esto es lo que te funcionaba bien (General)
+        equipos = Team.objects.using('mongo_db').all().order_by('nombre')
 
+    # ... El resto de tu lógica del POST se queda exactamente igual ...
     if request.method == 'POST':
+        # (Mantén el código del POST que ya tienes aquí)
         p1 = request.POST.get('posicion_1')
         p2 = request.POST.get('posicion_2')
         p3 = request.POST.get('posicion_3')
@@ -115,32 +128,27 @@ def crear_ranking(request, categoria_id=None):
         p5 = request.POST.get('posicion_5')
         titulo = request.POST.get('titulo')
 
-        if p1 and p2 and p3 and p4 and p5:
-            # Guardamos como strings (ObjectId en string)
+        if all([p1, p2, p3, p4, p5, titulo]):
             nuevo_ranking = Ranking.objects.using('mongo_db').create(
                 user_id=request.user.id,
                 username=request.user.username,
                 categoria=categoria_obj,
-                nombre=titulo if titulo else (
-                    f"Top 5 {categoria_obj.nombre}" if categoria_obj else "Top 5 General"
-                ),
-                posicion_1_id=str(p1),
-                posicion_2_id=str(p2),
-                posicion_3_id=str(p3),
-                posicion_4_id=str(p4),
-                posicion_5_id=str(p5)
+                nombre=titulo,
+                posicion_1_id=p1,
+                posicion_2_id=p2,
+                posicion_3_id=p3,
+                posicion_4_id=p4,
+                posicion_5_id=p5
             )
-
-            messages.success(request, "¡Ranking creado con éxito!")
+            messages.success(request, f"¡Ranking '{titulo}' creado con éxito!")
             return redirect('mis_rankings')
         else:
-            messages.error(request, "Por favor selecciona los 5 equipos.")
+            messages.error(request, "Faltan datos para completar el ranking.")
 
     return render(request, 'rankingWaterpolo/crear_top5.html', {
         'equipos': equipos,
         'categoria': categoria_obj
     })
-
 
 @login_required(login_url='login')
 def mis_rankings(request):

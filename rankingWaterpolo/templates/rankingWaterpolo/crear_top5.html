@@ -5,7 +5,9 @@
 
 <div class="max-w-6xl mx-auto mt-6 mb-10">
     <div class="text-center mb-8">
-        <h1 class="text-3xl font-black text-blue-900 mb-2">🏆 Configurar Ranking Top 5</h1>
+        <h1 class="text-3xl font-black text-blue-900 mb-2">
+            🏆 Configurar Ranking {% if categoria %}- {{ categoria.nombre }}{% else %}General{% endif %}
+        </h1>
         <p class="text-slate-500">Arrastra los equipos desde la lista de disponibles hacia tu Ranking.</p>
     </div>
 
@@ -73,14 +75,12 @@
         </div>
     </div>
 
-    <form method="POST" id="formularioReal" action="{% url 'crear_top5' %}" class="hidden" style="display:none;">
+      <form method="POST" id="formularioReal" class="hidden" style="display:none;">
         {% csrf_token %}
-        <input type="hidden" name="nombre_ranking" id="hidden_nombre">
-        <input type="hidden" name="equipo_1" id="hidden_eq1">
-        <input type="hidden" name="equipo_2" id="hidden_eq2">
-        <input type="hidden" name="equipo_3" id="hidden_eq3">
-        <input type="hidden" name="equipo_4" id="hidden_eq4">
-        <input type="hidden" name="equipo_5" id="hidden_eq5">
+        <input type="hidden" name="titulo" id="hidden_nombre"> <input type="hidden" name="posicion_1" id="hidden_eq1"> <input type="hidden" name="posicion_2" id="hidden_eq2">
+        <input type="hidden" name="posicion_3" id="hidden_eq3">
+        <input type="hidden" name="posicion_4" id="hidden_eq4">
+        <input type="hidden" name="posicion_5" id="hidden_eq5">
     </form>
 
 </div>
@@ -186,7 +186,6 @@ function prepararYEnviar() {
     var tituloVisible = document.getElementById('titulo_visible').value;
     var btnGuardar = document.getElementById('btnGuardarVisual');
 
-    // Validaciones
     if (items.length < 5) {
         alert("⚠️ Tu ranking está incompleto. Arrastra 5 equipos.");
         return;
@@ -197,20 +196,19 @@ function prepararYEnviar() {
     }
 
     if (confirm("¿Publicar ranking?")) {
-        // Bloquear botón para evitar doble click
         btnGuardar.disabled = true;
         btnGuardar.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> Guardando...';
 
-        // 1. Título
+        // 1. Asignar Título
         document.getElementById('hidden_nombre').value = tituloVisible;
 
-        // 2. Equipos
+        // 2. Asignar Nombres de Equipos (usando el data-nombre que ya tienes)
         for(var i=0; i<5; i++) {
-            var equipoNombre = items[i].dataset.nombre;
+            var equipoNombre = items[i].getAttribute('data-nombre'); // Extraemos el nombre
             document.getElementById('hidden_eq' + (i+1)).value = equipoNombre;
         }
 
-        // 3. Enviar form oculto
+        // 3. Enviar
         document.getElementById('formularioReal').submit();
     }
 }
