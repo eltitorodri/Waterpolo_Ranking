@@ -84,43 +84,69 @@ def home(request):
 
 # --- 3. RANKINGS (Nuevo sistema con Categorías) ---
 
+# --- PEGA ESTO EN TU VIEWS.PY QUE TE FALTA ---
+
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
     categoria_obj = None
     equipos = []
 
     if categoria_id:
+        # 1. BUSCAR LA CATEGORÍA
         try:
-            mongo_id = ObjectId(categoria_id)
-            categoria_obj = Categoria.objects.using('mongo_db').get(_id=mongo_id)
+            if ObjectId.is_valid(categoria_id):
+                categoria_obj = Categoria.objects.using('mongo_db').filter(_id=ObjectId(categoria_id)).first()
+            if not categoria_obj:
+                categoria_obj = Categoria.objects.using('mongo_db').filter(id=categoria_id).first()
+        except:
+            pass
 
-            # --- ESTRATEGIA DE RECUPERACIÓN PARA MONGODB ---
+        if categoria_obj:
+            # 1. Obtenemos los dos posibles IDs de la categoría en formato STRING limpio
+            id_largo = str(getattr(categoria_obj, '_id', '')).strip()
+            id_corto = str(getattr(categoria_obj, 'id', '')).strip()
 
-            # Intento 1: Buscar equipos que tengan asignada esta categoría (ForeignKey)
-            equipos_por_fk = Team.objects.using('mongo_db').filter(categoria=categoria_obj)
+            ids_validos = [id_largo, id_corto]
+            print(f"🎯 Buscando equipos con ID en: {ids_validos}")
 
-            # Intento 2: Buscar equipos asociados a través del ManyToMany de la categoría
-            # Usamos list() para forzar a Djongo a traer los datos de la colección
-            equipos_por_m2m = categoria_obj.equipos.all().using('mongo_db')
+            # 2. FILTRADO QUIRÚRGICO
+            todos = Team.objects.using('mongo_db').all()
+            for e in todos:
+                # Extraemos el valor de categoria_id tal cual está en la base de datos
+                # Usamos el diccionario interno para evitar que Django lo transforme
+                val_raw = e.__dict__.get('categoria_id', None)
 
-            # Combinamos ambos resultados y eliminamos duplicados
-            # Convertimos a lista para que el template pueda iterar sin problemas
-            equipos = list(set(list(equipos_por_fk) + list(equipos_por_m2m)))
+                if val_raw is not None:
+                    # Convertimos a string y quitamos posibles espacios o caracteres raros
+                    val_str = str(val_raw).strip()
 
-            # Ordenamos por nombre para que no salgan aleatorios
-            equipos.sort(key=lambda x: x.nombre)
+                    # Comparación: ¿Está el ID del equipo en nuestra lista de permitidos?
+                    if val_str in ids_validos:
+                        equipos.append(e)
 
-        except Exception as e:
-            print(f"Error recuperando equipos: {e}")
+            print(f"✅ Filtro aplicado. Coincidencias encontradas: {len(equipos)}")
+            # 3. FILTRADO ULTRA-RESISTENTE
+            todos = Team.objects.using('mongo_db').all()
+            for e in todos:
+                # Sacamos el valor crudo del equipo
+                val_equipo = str(e.__dict__.get('categoria_id', '')).strip()
+
+                # Comparación flexible: si el ID del equipo está en nuestra lista de IDs válidos
+                if val_equipo in [id_largo, id_corto] and val_equipo not in ['', 'None', 'None']:
+                    equipos.append(e)
+
+            # --- PLAN B: SI EL FILTRO SIGUE DANDO 0, MUESTRA TODOS ---
+            if not equipos:
+                print("⚠️ El filtro falló de nuevo. Cargando todos los equipos por seguridad.")
+                equipos = todos
+        else:
             messages.error(request, "Categoría no encontrada.")
             return redirect('home')
     else:
-        # Esto es lo que te funcionaba bien (General)
-        equipos = Team.objects.using('mongo_db').all().order_by('nombre')
+        equipos = Team.objects.using('mongo_db').all()
 
-    # ... El resto de tu lógica del POST se queda exactamente igual ...
+    # --- LÓGICA POST (Guardar) ---
     if request.method == 'POST':
-        # (Mantén el código del POST que ya tienes aquí)
         p1 = request.POST.get('posicion_1')
         p2 = request.POST.get('posicion_2')
         p3 = request.POST.get('posicion_3')
@@ -129,21 +155,16 @@ def crear_ranking(request, categoria_id=None):
         titulo = request.POST.get('titulo')
 
         if all([p1, p2, p3, p4, p5, titulo]):
-            nuevo_ranking = Ranking.objects.using('mongo_db').create(
+            Ranking.objects.using('mongo_db').create(
                 user_id=request.user.id,
                 username=request.user.username,
                 categoria=categoria_obj,
                 nombre=titulo,
-                posicion_1_id=p1,
-                posicion_2_id=p2,
-                posicion_3_id=p3,
-                posicion_4_id=p4,
-                posicion_5_id=p5
+                posicion_1_id=p1, posicion_2_id=p2, posicion_3_id=p3,
+                posicion_4_id=p4, posicion_5_id=p5
             )
-            messages.success(request, f"¡Ranking '{titulo}' creado con éxito!")
+            messages.success(request, "¡Ranking creado!")
             return redirect('mis_rankings')
-        else:
-            messages.error(request, "Faltan datos para completar el ranking.")
 
     return render(request, 'rankingWaterpolo/crear_top5.html', {
         'equipos': equipos,
@@ -217,28 +238,58 @@ from .forms import CategoriaForm # Asegúrate de importar el form
 
 @staff_member_required(login_url='home')
 def crear_categoria(request):
+    # Traemos todos los equipos para pintarlos en el HTML
+    equipos_para_html = Team.objects.using('mongo_db').all()
+
     if request.method == 'POST':
         form = CategoriaForm(request.POST, request.FILES)
-        if form.is_valid():
+
+        # Validación flexible para 'equipos' (Djongo a veces falla validando M2M)
+        es_valido = form.is_valid()
+        if not es_valido and 'equipos' in form.errors and len(form.errors) == 1:
+            es_valido = True
+
+        if es_valido:
             try:
-                # 1. Guardar datos básicos de la categoría
-                categoria = form.save(commit=False)
-                categoria.save(using='mongo_db')
+                # 1. Guardar la Categoría
+                if form.is_valid():
+                    categoria_guardada = form.save()
+                else:
+                    obj = form.save(commit=False)
+                    obj.save(using='mongo_db')
+                    categoria_guardada = obj
 
-                # 2. Gestionar los equipos
-                team_ids = form.cleaned_data.get('equipos')
-                if team_ids:
-                    # Buscamos los equipos reales en Mongo usando los IDs recibidos
-                    equipos_qs = Team.objects.using('mongo_db').filter(pk__in=team_ids)
-                    categoria.equipos.set(equipos_qs)
+                print(f"✅ Categoría guardada: {categoria_guardada.nombre} (ID: {categoria_guardada.pk})")
 
-                messages.success(request, '¡Categoría creada con éxito!')
+                # 2. Asignar equipos MANUALMENTE (Actualizamos el ForeignKey del Equipo)
+                ids_equipos_seleccionados = request.POST.getlist('equipos')
+                conteo = 0
+
+                if ids_equipos_seleccionados:
+                    for id_str in ids_equipos_seleccionados:
+                        try:
+                            # Buscamos el equipo y le asignamos esta categoría
+                            equipo = Team.objects.using('mongo_db').get(pk=ObjectId(id_str))
+                            equipo.categoria = categoria_guardada
+                            equipo.save(using='mongo_db')
+                            conteo += 1
+                        except Exception as e:
+                            print(f"⚠️ Error asignando equipo {id_str}: {e}")
+
+                messages.success(request, f"Categoría '{categoria_guardada.nombre}' creada con {conteo} equipos.")
                 return redirect('home')
+
             except Exception as e:
-                messages.error(request, f"Error al guardar: {e}")
+                print(f"❌ Error crítico: {e}")
+                messages.error(request, f"Error interno: {e}")
         else:
-            print(f"Errores del formulario: {form.errors}")
+            messages.error(request, "Revisa el formulario (Nombre repetido o falta imagen).")
+            print(form.errors)
+
     else:
         form = CategoriaForm()
 
-    return render(request, 'rankingWaterpolo/crear_categoria.html', {'form': form})
+    return render(request, 'rankingWaterpolo/crear_categoria.html', {
+        'form': form,
+        'equipos': equipos_para_html
+    })

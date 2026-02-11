@@ -16,6 +16,20 @@
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <h2 class="font-bold text-slate-700 mb-4 border-b pb-2">Información</h2>
 
+                {% if form.errors %}
+                    <div class="bg-red-50 text-red-600 p-3 rounded-lg text-xs mb-4">
+                        <p class="font-bold">Por favor corrige:</p>
+                        {{ form.non_field_errors }}
+                        <ul>
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
                 <div class="space-y-4">
                     <div>
                         <label class="text-xs font-bold text-slate-400 uppercase">Nombre</label>
@@ -52,19 +66,24 @@
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-2" id="teamList">
-                    {# Ajuste para MultipleChoiceField manual #}
-                    {% for val, name in form.equipos.field.choices %}
+
+                    {# Bucle manual sobre la variable 'equipos' que pasamos desde la vista #}
+                    {% for equipo in equipos %}
                     <label class="team-item flex items-center p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group">
                         <div class="relative flex items-center">
-                            <input type="checkbox" name="equipos" value="{{ val }}"
-                                   {% if val in form.equipos.value %}checked{% endif %}
+                            <input type="checkbox" name="equipos" value="{{ equipo.pk }}"
                                    class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                             <div class="ml-3">
-                                <span class="block text-sm font-bold text-slate-700 group-hover:text-blue-700">{{ name }}</span>
+                                <span class="block text-sm font-bold text-slate-700 group-hover:text-blue-700">
+                                    {{ equipo.nombre }}
+                                </span>
                             </div>
                         </div>
                     </label>
+                    {% empty %}
+                        <p class="text-gray-500 p-4 col-span-2 text-center">No hay equipos disponibles en la base de datos.</p>
                     {% endfor %}
+
                 </div>
             </div>
         </div>
@@ -77,7 +96,6 @@
         const items = document.querySelectorAll('.team-item');
 
         items.forEach(item => {
-            // Buscamos el texto dentro del span para que sea más preciso
             const teamName = item.querySelector('span').textContent.toLowerCase();
             if(teamName.includes(text)) {
                 item.style.display = 'flex';
@@ -89,7 +107,6 @@
 </script>
 
 <style>
-    /* Estilo para los checkboxes */
     input[type="checkbox"] {
         width: 1.2rem;
         height: 1.2rem;
