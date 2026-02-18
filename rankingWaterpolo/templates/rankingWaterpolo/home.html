@@ -6,13 +6,13 @@
 {% if messages %}
     <div class="fixed top-24 right-5 z-50 flex flex-col gap-2">
         {% for message in messages %}
-        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg flex items-center gap-3 animate-bounce-in transform transition-all duration-500" role="alert">
-            <i class="ph ph-check-circle text-2xl"></i>
+        <div class="{% if message.tags == 'success' %}bg-green-100 border-green-500 text-green-700{% else %}bg-red-100 border-red-500 text-red-700{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3 animate-bounce-in transform transition-all duration-500" role="alert">
+            <i class="ph {% if message.tags == 'success' %}ph-check-circle{% else %}ph-warning-circle{% endif %} text-2xl"></i>
             <div>
-                <p class="font-bold">¡Hecho!</p>
+                <p class="font-bold">{% if message.tags == 'success' %}¡Hecho!{% else %}Atención{% endif %}</p>
                 <p class="text-sm">{{ message }}</p>
             </div>
-            <button onclick="this.parentElement.remove()" class="ml-4 text-green-500 hover:text-green-700">
+            <button onclick="this.parentElement.remove()" class="ml-4 opacity-50 hover:opacity-100">
                 <i class="ph ph-x-circle text-lg"></i>
             </button>
         </div>
@@ -29,164 +29,246 @@
     </script>
 {% endif %}
 
-<div class="mb-10 text-center">
-    <h1 class="text-4xl font-black text-blue-900 mb-2">
-        Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
-    </h1>
-    <p class="text-slate-500 max-w-2xl mx-auto">
-        Gestiona tus rankings, consulta estadísticas y valora a los equipos de la liga.
-    </p>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
-        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
-            <i class="ph ph-trophy text-3xl"></i>
+{% if section == 'gestion' and user.is_staff %}
+    <div class="animate-fade-in">
+        <div class="mb-10 text-center">
+            <h1 class="text-4xl font-black text-slate-900 mb-2">Panel de <span class="text-blue-600">Gestión</span></h1>
+            <p class="text-slate-500">Configuración avanzada y carga masiva de datos.</p>
         </div>
-        <div>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Mejor Valorado</p>
-            <h3 class="text-xl font-bold text-slate-800 mt-1">
-                {% if mejor_equipo and mejor_equipo.media_puntos %}
-                    {{ mejor_equipo.nombre }}
-                    <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-sm ml-2">
-                        <i class="ph ph-star-fill"></i> {{ mejor_equipo.media_puntos|floatformat:1 }}
-                    </span>
-                {% else %}
-                    <span class="text-slate-400 italic">Sin datos suficientes</span>
-                {% endif %}
-            </h3>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-8 rounded-3xl border border-blue-100 shadow-sm">
+                    <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
+                        <i class="ph ph-file-csv text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2">Importar Equipos</h3>
+                    <p class="text-sm text-slate-500 mb-6">Selecciona un CSV para ver la previsualización.</p>
+
+                    <form action="{% url 'importar_equipos_csv' %}" method="POST" enctype="multipart/form-data" class="space-y-4" id="csvForm">
+                        {% csrf_token %}
+                        <div class="p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-blue-400 transition-colors">
+                            <input type="file" name="archivo_csv" id="csvInput" accept=".csv" required
+                                class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-100">
+                            <i class="ph ph-cloud-arrow-up"></i> Procesar CSV
+                        </button>
+                    </form>
+                </div>
+
+                <a href="{% url 'crear_categoria' %}" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-2xl transition flex items-center justify-center gap-2 shadow-md">
+                    <i class="ph ph-plus-circle text-xl"></i> Nueva Categoría
+                </a>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full min-h-[400px]">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="ph ph-eye text-blue-500"></i> Previsualización de Equipos
+                    </h3>
+
+                    <div id="previewContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-300">
+                            <i class="ph ph-magnifying-glass text-5xl mb-2"></i>
+                            <p class="text-sm">Ningún archivo seleccionado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
-        <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600 flex-shrink-0">
-            <i class="ph ph-star text-3xl"></i>
-        </div>
-        <div>
-            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Valoraciones</p>
-            <h3 class="text-xl font-bold text-slate-800 mt-1">
-                {{ total_valoraciones|default:"0" }}
-                <span class="text-sm text-slate-400 font-normal">opiniones registradas</span>
-            </h3>
-        </div>
+    <script>
+        document.getElementById('csvInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const container = document.getElementById('previewContainer');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const text = event.target.result;
+                    const lines = text.split('\n');
+                    // Limpiamos contenedor
+                    container.innerHTML = '';
+
+                    // Empezamos en 1 para saltar la cabecera (nombre, escudo, etc.)
+                    lines.slice(1).forEach(line => {
+                        if (line.trim() === '') return;
+
+                        const columns = line.split(',');
+                        // Ajusta los índices según tu CSV: 0=nombre, 1=escudo_url
+                        const nombre = columns[0];
+                        const foto = columns[1];
+
+                        if (nombre) {
+                            const item = document.createElement('div');
+                            item.className = "flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-fade-in";
+                            item.innerHTML = `
+                                <img src="${foto || 'https://via.placeholder.com/40'}"
+                                     class="w-10 h-10 rounded-full object-cover bg-white border border-slate-200"
+                                     onerror="this.src='https://via.placeholder.com/40?text=WP'">
+                                <span class="font-bold text-slate-700 text-sm truncate">${nombre}</span>
+                            `;
+                            container.appendChild(item);
+                        }
+                    });
+                };
+                reader.readAsText(file);
+            }
+        });
+    </script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+
+{% else %}
+
+    <div class="mb-10 text-center">
+        <h1 class="text-4xl font-black text-blue-900 mb-2">
+            Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
+        </h1>
+        <p class="text-slate-500 max-w-2xl mx-auto">
+            Gestiona tus rankings, consulta estadísticas y valora a los equipos de la liga.
+        </p>
     </div>
-</div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-
-    <a href="{% url 'crear_top5' %}" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200/50 flex flex-col justify-between hover:bg-blue-700 hover:-translate-y-1 transition duration-300">
-        <div class="flex justify-between items-start mb-4">
-            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
-                <i class="ph ph-list-numbers text-2xl"></i>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
+                <i class="ph ph-trophy text-3xl"></i>
             </div>
-            <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
-        </div>
-        <div>
-            <h3 class="text-lg font-bold text-white">Ranking Rápido</h3>
-            <p class="text-blue-100 text-sm">Crea un Top 5 general.</p>
-        </div>
-    </a>
-
-    <a href="{% url 'valorar_equipos' %}" class="group bg-amber-500 p-6 rounded-2xl shadow-lg shadow-amber-200/50 flex flex-col justify-between hover:bg-amber-600 hover:-translate-y-1 transition duration-300">
-        <div class="flex justify-between items-start mb-4">
-            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
-                <i class="ph ph-star-half text-2xl"></i>
-            </div>
-            <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
-        </div>
-        <div>
-            <h3 class="text-lg font-bold text-white">Valorar Equipos</h3>
-            <p class="text-amber-100 text-sm">Puntúa y comenta.</p>
-        </div>
-    </a>
-
-    <a href="{% url 'mis_rankings' %}" class="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-1 transition duration-300">
-        <div class="flex justify-between items-start mb-4">
-            <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                <i class="ph ph-users text-2xl"></i>
-            </div>
-            <i class="ph ph-arrow-right text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-transform"></i>
-        </div>
-        <div>
-            <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">Mis Rankings</h3>
-            <p class="text-slate-400 text-sm">Consulta tu historial.</p>
-        </div>
-    </a>
-
-</div>
-
-<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
-    <form method="GET" action="{% url 'home' %}" class="relative w-full md:w-1/2">
-        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-        <input
-            type="text"
-            name="q"
-            value="{{ query|default:'' }}"
-            placeholder="Buscar categoría..."
-            class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-        >
-    </form>
-
-    <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-        <span class="text-xs font-bold text-slate-400 uppercase self-center mr-2">Filtros:</span>
-        <a href="?q=" class="text-xs font-bold {% if not query %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Todas</a>
-        <a href="?q=Masculino" class="text-xs font-bold {% if query == 'Masculino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Masculino</a>
-    </div>
-</div>
-
-<div class="flex items-center justify-between mb-6">
-    <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
-    {% if user.is_staff %}
-    <a href="{% url 'crear_categoria' %}" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg font-bold transition flex items-center gap-2">
-        <i class="ph ph-plus-circle"></i> Nueva
-    </a>
-    {% endif %}
-</div>
-
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-    {% for cat in categorias %}
-
-    <a href="{% url 'crear_ranking_categoria' cat.pk %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col h-full">
-
-        <div class="h-32 bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden relative">
-            {% if cat.imagen %}
-                <img src="{{ cat.imagen.url }}" alt="{{ cat.nombre }}" class="w-full h-full object-cover">
-            {% else %}
-                <i class="ph ph-trophy text-4xl text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-transform duration-300"></i>
-            {% endif %}
-        </div>
-
-        <div class="p-5 flex-1 flex flex-col justify-between">
             <div>
-                <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
-                    {{ cat.nombre }}
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Mejor Valorado</p>
+                <h3 class="text-xl font-bold text-slate-800 mt-1">
+                    {% if mejor_equipo and mejor_equipo.media_puntos %}
+                        {{ mejor_equipo.nombre }}
+                        <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-sm ml-2">
+                            <i class="ph ph-star-fill"></i> {{ mejor_equipo.media_puntos|floatformat:1 }}
+                        </span>
+                    {% else %}
+                        <span class="text-slate-400 italic">Sin datos suficientes</span>
+                    {% endif %}
                 </h3>
-                <p class="text-sm text-slate-500 line-clamp-2">
-                    {% if cat.temporada %}Temporada {{ cat.temporada }}{% else %}Liga Regular{% endif %}
-                </p>
-            </div>
-
-            <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                <span class="text-xs text-slate-400 font-medium">
-                    <i class="ph ph-users"></i> {{ cat.equipos.all.count }} Equipos
-                </span>
-                <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">
-                    Crear Ranking <i class="ph ph-caret-right"></i>
-                </span>
             </div>
         </div>
-    </a>
 
-    {% empty %}
-    <div class="col-span-full py-12 text-center">
-        <div class="bg-slate-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <i class="ph ph-magnifying-glass text-3xl text-slate-300"></i>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
+            <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600 flex-shrink-0">
+                <i class="ph ph-star text-3xl"></i>
+            </div>
+            <div>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Valoraciones</p>
+                <h3 class="text-xl font-bold text-slate-800 mt-1">
+                    {{ total_valoraciones|default:"0" }}
+                    <span class="text-sm text-slate-400 font-normal">opiniones registradas</span>
+                </h3>
+            </div>
         </div>
-        <p class="text-slate-600 font-medium">No se encontraron categorías.</p>
-        <p class="text-slate-400 text-sm">Intenta otra búsqueda.</p>
     </div>
 
-    {% endfor %}
-</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <a href="{% url 'crear_top5' %}" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200/50 flex flex-col justify-between hover:bg-blue-700 hover:-translate-y-1 transition duration-300">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
+                    <i class="ph ph-list-numbers text-2xl"></i>
+                </div>
+                <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Ranking Rápido</h3>
+                <p class="text-blue-100 text-sm">Crea un Top 5 general.</p>
+            </div>
+        </a>
+
+        <a href="{% url 'valorar_equipos' %}" class="group bg-amber-500 p-6 rounded-2xl shadow-lg shadow-amber-200/50 flex flex-col justify-between hover:bg-amber-600 hover:-translate-y-1 transition duration-300">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
+                    <i class="ph ph-star-half text-2xl"></i>
+                </div>
+                <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Valorar Equipos</h3>
+                <p class="text-amber-100 text-sm">Puntúa y comenta.</p>
+            </div>
+        </a>
+
+        <a href="{% url 'mis_rankings' %}" class="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-1 transition duration-300">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                    <i class="ph ph-users text-2xl"></i>
+                </div>
+                <i class="ph ph-arrow-right text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-transform"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">Mis Rankings</h3>
+                <p class="text-slate-400 text-sm">Consulta tu historial.</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <form method="GET" action="{% url 'home' %}" class="relative w-full md:w-1/2">
+            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar categoría..."
+                class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+        </form>
+
+        <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+            <span class="text-xs font-bold text-slate-400 uppercase self-center mr-2">Filtros:</span>
+            <a href="?q=" class="text-xs font-bold {% if not query %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Todas</a>
+            <a href="?q=Masculino" class="text-xs font-bold {% if query == 'Masculino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Masculino</a>
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for cat in categorias %}
+        <a href="{% url 'crear_ranking_categoria' cat.pk %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col h-full">
+            <div class="h-32 bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden relative">
+                {% if cat.imagen %}
+                    <img src="{{ cat.imagen.url }}" alt="{{ cat.nombre }}" class="w-full h-full object-cover">
+                {% else %}
+                    <i class="ph ph-trophy text-4xl text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-transform duration-300"></i>
+                {% endif %}
+            </div>
+            <div class="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">{{ cat.nombre }}</h3>
+                    <p class="text-sm text-slate-500 line-clamp-2">
+                        {% if cat.temporada %}Temporada {{ cat.temporada }}{% else %}Liga Regular{% endif %}
+                    </p>
+                </div>
+                <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
+                    <span class="text-xs text-slate-400 font-medium"><i class="ph ph-users"></i> {{ cat.equipos.all.count }} Equipos</span>
+                    <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">Crear Ranking <i class="ph ph-caret-right"></i></span>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="col-span-full py-12 text-center">
+            <div class="bg-slate-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                <i class="ph ph-magnifying-glass text-3xl text-slate-300"></i>
+            </div>
+            <p class="text-slate-600 font-medium">No se encontraron categorías.</p>
+        </div>
+        {% endfor %}
+    </div>
+{% endif %}
 
 {% endblock %}

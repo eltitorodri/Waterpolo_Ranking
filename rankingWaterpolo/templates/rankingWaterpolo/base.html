@@ -37,7 +37,9 @@
                             <a href="#" class="text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-full border border-amber-200 hover:bg-amber-200 transition">
                                 <i class="ph ph-crown"></i> MODO ADMIN
                             </a>
-                            <a href="#" class="text-sm font-semibold text-slate-600 hover:text-blue-600">Gestión</a>
+                            <a href="{% url 'home' %}?section=gestion" class="text-slate-500 hover:text-blue-600 font-bold transition">
+                                Gestión
+                            </a>
                         {% endif %}
 
                         <div class="flex items-center gap-3">

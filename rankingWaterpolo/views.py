@@ -42,31 +42,30 @@ def logout_view(request):
 
 # --- 2. HOME (Con estadísticas) ---
 
+@login_required(login_url='login')
 def home(request):
-    # Lógica de Búsqueda
+    # Detectamos en qué sección estamos (por defecto: categorias)
+    section = request.GET.get('section', 'categorias')
+
     query = request.GET.get('q')
     if query:
-        categorias = Categoria.objects.using('mongo_db').filter(
-            Q(nombre__icontains=query)  # Quitamos descripción por si no existe campo
-        )
+        categorias = Categoria.objects.using('mongo_db').filter(nombre__icontains=query)
     else:
         categorias = Categoria.objects.using('mongo_db').all()
 
-    # Lógica de Estadísticas
     equipos = Team.objects.using('mongo_db').all()
     todas_vals = Valoracion.objects.using('mongo_db').all()
 
+    # Lógica de estadísticas
     total_valoraciones = todas_vals.count()
     mejor_equipo = None
     max_media = -1
 
     for equipo in equipos:
         vals_equipo = Valoracion.objects.using('mongo_db').filter(equipo=equipo)
-
         if vals_equipo.exists():
             promedio = sum(v.puntuacion for v in vals_equipo) / vals_equipo.count()
-            equipo.media_puntos = round(promedio, 1)  # Redondeamos para que quede bonito
-
+            equipo.media_puntos = round(promedio, 1)
             if promedio > max_media:
                 max_media = promedio
                 mejor_equipo = equipo
@@ -78,6 +77,7 @@ def home(request):
         'query': query,
         'mejor_equipo': mejor_equipo,
         'total_valoraciones': total_valoraciones,
+        'section': section,  # <-- Pasamos la sección actual al HTML
     }
     return render(request, 'rankingWaterpolo/home.html', context)
 
@@ -293,3 +293,53 @@ def crear_categoria(request):
         'form': form,
         'equipos': equipos_para_html
     })
+
+
+import csv
+import io
+from django.contrib.admin.views.decorators import staff_member_required
+from .forms import CSVImportForm
+
+
+@staff_member_required(login_url='home')
+def importar_equipos_csv(request):
+    if request.method == 'POST':
+        form = CSVImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            archivo = request.FILES['archivo_csv']
+
+            # Leer el archivo
+            data_set = archivo.read().decode('UTF-8')
+            io_string = io.StringIO(data_set)
+            next(io_string)  # Saltamos la cabecera si la tiene
+
+            conteo = 0
+            for row in csv.reader(io_string, delimiter=',', quotechar='"'):
+                # Estructura esperada del CSV:
+                # nombre, escudo, liga, sexo, entrenador, piscina, ciudad, nombre_categoria
+                try:
+                    nombre_equipo = row[0]
+                    # Buscamos si existe la categoría para enlazarla
+                    cat_obj = None
+                    if len(row) > 7 and row[7]:
+                        cat_obj = Categoria.objects.using('mongo_db').filter(nombre=row[7]).first()
+
+                    Team.objects.using('mongo_db').create(
+                        nombre=nombre_equipo,
+                        escudo=row[1] if row[1] else "",
+                        liga=row[2],
+                        sexo=row[3],
+                        entrenador=row[4],
+                        piscina=row[5],
+                        ciudad=row[6],
+                        categoria=cat_obj
+                    )
+                    conteo += 1
+                except Exception as e:
+                    print(f"Error en fila {nombre_equipo}: {e}")
+                    continue
+
+            messages.success(request, f"¡Éxito! Se han importado {conteo} equipos correctamente.")
+            return redirect('home')
+
+    return redirect('home')

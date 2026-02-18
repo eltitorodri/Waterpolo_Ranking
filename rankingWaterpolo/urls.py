@@ -22,6 +22,8 @@ urlpatterns = [
     path('mis-rankings/', views.mis_rankings, name='mis_rankings'),
     path('valorar-equipos/', views.valorar_equipos, name='valorar_equipos'),
     path('crear-categoria/', views.crear_categoria, name='crear_categoria'),
+    # En urlpatterns añade:
+    path('importar-equipos-csv/', views.importar_equipos_csv, name='importar_equipos_csv'),
 ]
 
 if settings.DEBUG:

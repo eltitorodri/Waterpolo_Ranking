@@ -56,3 +56,10 @@ class CategoriaForm(forms.ModelForm):
             (str(equipo.pk), equipo.nombre)
             for equipo in Team.objects.using('mongo_db').all().order_by('nombre')
         ]
+
+# Añade esto a tu forms.py
+class CSVImportForm(forms.Form):
+    archivo_csv = forms.FileField(
+        label="Seleccionar archivo CSV",
+        widget=forms.FileInput(attrs={'class': 'block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer'})
+    )
