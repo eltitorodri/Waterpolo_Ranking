@@ -6,13 +6,13 @@
 {% if messages %}
     <div class="fixed top-24 right-5 z-50 flex flex-col gap-2">
         {% for message in messages %}
-        <div class="{% if message.tags == 'success' %}bg-green-100 border-green-500 text-green-700{% else %}bg-red-100 border-red-500 text-red-700{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3 animate-bounce-in transform transition-all duration-500" role="alert">
+        <div class="{% if message.tags == 'success' %}bg-green-100 border-green-500 text-green-700{% else %}bg-red-100 border-red-500 text-red-700{% endif %} border-l-4 p-4 rounded shadow-lg flex items-center gap-3 animate-bounce-in transform transition-all duration-500 shadow-xl" role="alert">
             <i class="ph {% if message.tags == 'success' %}ph-check-circle{% else %}ph-warning-circle{% endif %} text-2xl"></i>
             <div>
                 <p class="font-bold">{% if message.tags == 'success' %}¡Hecho!{% else %}Atención{% endif %}</p>
                 <p class="text-sm">{{ message }}</p>
             </div>
-            <button onclick="this.parentElement.remove()" class="ml-4 opacity-50 hover:opacity-100">
+            <button onclick="this.parentElement.remove()" class="ml-4 opacity-50 hover:opacity-100 transition">
                 <i class="ph ph-x-circle text-lg"></i>
             </button>
         </div>
@@ -29,8 +29,9 @@
     </script>
 {% endif %}
 
+
 {% if section == 'gestion' and user.is_staff %}
-    <div class="animate-fade-in">
+    <div class="animate-fade-in mb-20">
         <div class="mb-10 text-center">
             <h1 class="text-4xl font-black text-slate-900 mb-2">Panel de <span class="text-blue-600">Gestión</span></h1>
             <p class="text-slate-500">Configuración avanzada y carga masiva de datos.</p>
@@ -39,44 +40,53 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
 
             <div class="lg:col-span-1 space-y-6">
-                <div class="bg-white p-8 rounded-3xl border border-blue-100 shadow-sm">
-                    <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
-                        <i class="ph ph-file-csv text-2xl"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-2">Importar Equipos</h3>
-                    <p class="text-sm text-slate-500 mb-6">Selecciona un CSV para ver la previsualización.</p>
-
-                    <form action="{% url 'importar_equipos_csv' %}" method="POST" enctype="multipart/form-data" class="space-y-4" id="csvForm">
-                        {% csrf_token %}
-                        <div class="p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-blue-400 transition-colors">
-                            <input type="file" name="archivo_csv" id="csvInput" accept=".csv" required
-                                class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                <div class="bg-white p-8 rounded-3xl border border-blue-100 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-blue-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                    <div class="relative z-10">
+                        <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
+                            <i class="ph ph-file-csv text-2xl"></i>
                         </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-100">
-                            <i class="ph ph-cloud-arrow-up"></i> Procesar CSV
-                        </button>
-                    </form>
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">Importar Equipos</h3>
+                        <p class="text-sm text-slate-500 mb-6">Selecciona un CSV para ver la previsualización antes de subirlo.</p>
+
+                        <form action="{% url 'importar_equipos_csv' %}" method="POST" enctype="multipart/form-data" class="space-y-4" id="csvForm">
+                            {% csrf_token %}
+                            <div class="p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl hover:border-blue-400 transition-colors group">
+                                <input type="file" name="archivo_csv" id="csvInput" accept=".csv" required
+                                    class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white group-hover:file:bg-blue-700 cursor-pointer">
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-100 transform active:scale-95">
+                                <i class="ph ph-cloud-arrow-up text-xl"></i> Procesar CSV
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
-                <a href="{% url 'crear_categoria' %}" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-2xl transition flex items-center justify-center gap-2 shadow-md">
-                    <i class="ph ph-plus-circle text-xl"></i> Nueva Categoría
+                <a href="{% url 'crear_categoria' %}" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 rounded-3xl transition flex items-center justify-center gap-3 shadow-lg transform hover:-translate-y-1">
+                    <i class="ph ph-plus-circle text-2xl text-green-400"></i> Nueva Categoría
                 </a>
             </div>
 
             <div class="lg:col-span-2">
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full min-h-[400px]">
-                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <i class="ph ph-eye text-blue-500"></i> Previsualización de Equipos
+                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-full min-h-[400px] flex flex-col">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-50 pb-4">
+                        <i class="ph ph-eye text-blue-500"></i> Previsualización de Datos
                     </h3>
 
-                    <div id="previewContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div id="previewContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar flex-1">
                         <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-300">
-                            <i class="ph ph-magnifying-glass text-5xl mb-2"></i>
-                            <p class="text-sm">Ningún archivo seleccionado</p>
+                            <i class="ph ph-magnifying-glass text-5xl mb-4"></i>
+                            <p class="text-sm font-medium">Sube un archivo .csv para ver los equipos aquí</p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="text-center mt-12">
+            <a href="{% url 'home' %}" class="text-slate-400 hover:text-blue-600 font-bold text-sm transition flex items-center justify-center gap-2">
+                <i class="ph ph-arrow-left"></i> Volver a la Vista Principal
+            </a>
         </div>
     </div>
 
@@ -90,26 +100,29 @@
                 reader.onload = function(event) {
                     const text = event.target.result;
                     const lines = text.split('\n');
-                    // Limpiamos contenedor
-                    container.innerHTML = '';
+                    container.innerHTML = ''; // Limpiar
 
-                    // Empezamos en 1 para saltar la cabecera (nombre, escudo, etc.)
+                    // Saltamos la cabecera (slice 1)
                     lines.slice(1).forEach(line => {
                         if (line.trim() === '') return;
 
+                        // Parsear CSV básico (Ojo: falla si hay comas dentro de comillas, pero para esto sirve)
                         const columns = line.split(',');
-                        // Ajusta los índices según tu CSV: 0=nombre, 1=escudo_url
                         const nombre = columns[0];
                         const foto = columns[1];
+                        // Ajusta índices según tu CSV real
 
                         if (nombre) {
                             const item = document.createElement('div');
-                            item.className = "flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-fade-in";
+                            item.className = "flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-fade-in hover:bg-blue-50 transition";
                             item.innerHTML = `
-                                <img src="${foto || 'https://via.placeholder.com/40'}"
-                                     class="w-10 h-10 rounded-full object-cover bg-white border border-slate-200"
-                                     onerror="this.src='https://via.placeholder.com/40?text=WP'">
-                                <span class="font-bold text-slate-700 text-sm truncate">${nombre}</span>
+                                <img src="${foto && foto.length > 5 ? foto : 'https://via.placeholder.com/40?text=WP'}"
+                                     class="w-10 h-10 rounded-full object-contain bg-white border border-slate-200 shadow-sm"
+                                     onerror="this.src='https://via.placeholder.com/40?text=Err'">
+                                <div class="overflow-hidden">
+                                    <span class="block font-bold text-slate-700 text-sm truncate">${nombre}</span>
+                                    <span class="text-[10px] text-slate-400 uppercase">Nuevo Equipo</span>
+                                </div>
                             `;
                             container.appendChild(item);
                         }
@@ -120,22 +133,10 @@
         });
     </script>
 
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-    </style>
 
 {% else %}
 
-    <div class="mb-10 text-center">
+    <div class="mb-10 text-center animate-fade-in">
         <h1 class="text-4xl font-black text-blue-900 mb-2">
             Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
         </h1>
@@ -145,27 +146,27 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
-            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition group">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">
                 <i class="ph ph-trophy text-3xl"></i>
             </div>
             <div>
                 <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Mejor Valorado</p>
-                <h3 class="text-xl font-bold text-slate-800 mt-1">
-                    {% if mejor_equipo and mejor_equipo.media_puntos %}
+                <h3 class="text-xl font-bold text-slate-800 mt-1 flex items-center gap-2">
+                    {% if mejor_equipo and mejor_equipo.media_puntos > 0 %}
                         {{ mejor_equipo.nombre }}
-                        <span class="inline-flex items-center gap-1 bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-sm ml-2">
+                        <span class="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md text-sm font-black">
                             <i class="ph ph-star-fill"></i> {{ mejor_equipo.media_puntos|floatformat:1 }}
                         </span>
                     {% else %}
-                        <span class="text-slate-400 italic">Sin datos suficientes</span>
+                        <span class="text-slate-400 italic font-normal">Sin datos suficientes</span>
                     {% endif %}
                 </h3>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition">
-            <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600 flex-shrink-0">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 flex items-center gap-6 hover:shadow-md transition group">
+            <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center text-cyan-600 flex-shrink-0 group-hover:bg-cyan-500 group-hover:text-white transition">
                 <i class="ph ph-star text-3xl"></i>
             </div>
             <div>
@@ -219,7 +220,7 @@
         </a>
     </div>
 
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between sticky top-20 z-40">
         <form method="GET" action="{% url 'home' %}" class="relative w-full md:w-1/2">
             <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
             <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar categoría..."
@@ -228,8 +229,9 @@
 
         <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
             <span class="text-xs font-bold text-slate-400 uppercase self-center mr-2">Filtros:</span>
-            <a href="?q=" class="text-xs font-bold {% if not query %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Todas</a>
-            <a href="?q=Masculino" class="text-xs font-bold {% if query == 'Masculino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} px-3 py-1.5 rounded-full hover:bg-blue-500 hover:text-white transition">Masculino</a>
+            <a href="{% url 'home' %}" class="text-xs font-bold {% if not query %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %} px-3 py-1.5 rounded-full transition">Todas</a>
+            <a href="?q=Masculino" class="text-xs font-bold {% if query == 'Masculino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %} px-3 py-1.5 rounded-full transition">Masculino</a>
+            <a href="?q=Femenino" class="text-xs font-bold {% if query == 'Femenino' %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %} px-3 py-1.5 rounded-full transition">Femenino</a>
         </div>
     </div>
 
@@ -237,16 +239,19 @@
         <h2 class="text-2xl font-bold text-slate-800">Categorías Disponibles</h2>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {% for cat in categorias %}
-        <a href="{% url 'crear_ranking_categoria' cat.pk %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col h-full">
-            <div class="h-32 bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden relative">
+        <a href="{% url 'crear_ranking_categoria' cat.pk %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden flex flex-col h-full">
+            <div class="h-36 bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden relative">
                 {% if cat.imagen %}
-                    <img src="{{ cat.imagen.url }}" alt="{{ cat.nombre }}" class="w-full h-full object-cover">
+                    <img src="{{ cat.imagen.url }}" alt="{{ cat.nombre }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
                 {% else %}
-                    <i class="ph ph-trophy text-4xl text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-transform duration-300"></i>
+                    <i class="ph ph-trophy text-5xl text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-transform duration-300"></i>
                 {% endif %}
+
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors"></div>
             </div>
+
             <div class="p-5 flex-1 flex flex-col justify-between">
                 <div>
                     <h3 class="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">{{ cat.nombre }}</h3>
@@ -255,20 +260,42 @@
                     </p>
                 </div>
                 <div class="mt-4 flex items-center justify-between border-t border-slate-50 pt-3">
-                    <span class="text-xs text-slate-400 font-medium"><i class="ph ph-users"></i> {{ cat.equipos.all.count }} Equipos</span>
-                    <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">Crear Ranking <i class="ph ph-caret-right"></i></span>
+                    <span class="text-xs text-slate-400 font-medium flex items-center gap-1">
+                        <i class="ph ph-users"></i> {{ cat.equipos.all.count }} Equipos
+                    </span>
+                    <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">
+                        Crear Ranking <i class="ph ph-caret-right"></i>
+                    </span>
                 </div>
             </div>
         </a>
         {% empty %}
-        <div class="col-span-full py-12 text-center">
-            <div class="bg-slate-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+        <div class="col-span-full py-16 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+            <div class="bg-white rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <i class="ph ph-magnifying-glass text-3xl text-slate-300"></i>
             </div>
-            <p class="text-slate-600 font-medium">No se encontraron categorías.</p>
+            <h3 class="text-lg font-bold text-slate-700">No hay categorías</h3>
+            <p class="text-slate-500 font-medium">No hemos encontrado lo que buscas.</p>
+            {% if query %}
+            <a href="{% url 'home' %}" class="inline-block mt-4 text-blue-600 font-bold text-sm hover:underline">Borrar filtros</a>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+
 {% endif %}
 
 {% endblock %}

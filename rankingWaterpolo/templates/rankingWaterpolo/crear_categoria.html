@@ -3,87 +3,111 @@
 {% block content %}
 <div class="max-w-4xl mx-auto mt-10 px-4 mb-20">
     <div class="flex items-center gap-4 mb-8">
-        <a href="{% url 'home' %}" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+        <a href="{% url 'home' %}" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition shadow-sm">
             <i class="ph ph-arrow-left text-xl"></i>
         </a>
-        <h1 class="text-3xl font-black text-slate-800">Nueva Categoría</h1>
+        <div>
+            <h1 class="text-3xl font-black text-slate-800">Nueva Categoría</h1>
+            <p class="text-slate-500 text-sm">Crea una liga o torneo y selecciona sus equipos.</p>
+        </div>
     </div>
 
     <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-3 gap-8">
         {% csrf_token %}
 
         <div class="md:col-span-1 space-y-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <h2 class="font-bold text-slate-700 mb-4 border-b pb-2">Información</h2>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-24">
+                <h2 class="font-bold text-slate-700 mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <i class="ph ph-info text-blue-500"></i> Información
+                </h2>
 
                 {% if form.errors %}
-                    <div class="bg-red-50 text-red-600 p-3 rounded-lg text-xs mb-4">
-                        <p class="font-bold">Por favor corrige:</p>
-                        {{ form.non_field_errors }}
-                        <ul>
+                    <div class="bg-red-50 text-red-600 p-3 rounded-lg text-xs mb-4 border border-red-100">
+                        <p class="font-bold mb-1"><i class="ph ph-warning"></i> Errores:</p>
+                        <ul class="list-disc pl-4">
                             {% for field in form %}
                                 {% for error in field.errors %}
-                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                    <li>{{ error }}</li>
                                 {% endfor %}
                             {% endfor %}
                         </ul>
                     </div>
                 {% endif %}
 
-                <div class="space-y-4">
+                <div class="space-y-5">
                     <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase">Nombre</label>
+                        <label class="text-xs font-bold text-slate-400 uppercase block mb-1">Nombre Categoría</label>
                         {{ form.nombre }}
-                    </div>
+                        </div>
                     <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase">Temporada</label>
+                        <label class="text-xs font-bold text-slate-400 uppercase block mb-1">Temporada</label>
                         {{ form.temporada }}
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase">Imagen</label>
-                        <div class="mt-1">{{ form.imagen }}</div>
+                        <label class="text-xs font-bold text-slate-400 uppercase block mb-1">Imagen / Logo</label>
+                        <div class="mt-1 text-sm text-slate-500 overflow-hidden">
+                            {{ form.imagen }}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all transform hover:-translate-y-1">
-                CREAR CATEGORÍA
-            </button>
+                <div class="mt-8 pt-4 border-t border-slate-100">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-4 rounded-xl shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                        <i class="ph ph-check-circle text-xl"></i> GUARDAR
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="md:col-span-2">
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
                 <div class="p-6 bg-slate-50 border-b border-slate-100">
-                    <h2 class="font-bold text-slate-700 flex items-center gap-2">
-                        <i class="ph ph-shield-check text-blue-600 text-xl"></i>
-                        Gestionar Equipos
-                    </h2>
-                    <div class="mt-4 relative">
-                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="teamSearch" placeholder="Buscar equipo..."
-                               class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-slate-700 flex items-center gap-2 text-lg">
+                            <i class="ph ph-shield-check text-blue-600 text-2xl"></i>
+                            Vincular Equipos
+                        </h2>
+                        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-bold" id="contadorEquipos">0 seleccionados</span>
+                    </div>
+
+                    <div class="relative group">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        <input type="text" id="teamSearch" placeholder="Buscar por nombre..."
+                               class="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm">
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-2" id="teamList">
-
-                    {# Bucle manual sobre la variable 'equipos' que pasamos desde la vista #}
+                <div class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white" id="teamList">
                     {% for equipo in equipos %}
-                    <label class="team-item flex items-center p-3 rounded-xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all group">
-                        <div class="relative flex items-center">
-                            <input type="checkbox" name="equipos" value="{{ equipo.pk }}"
-                                   class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                            <div class="ml-3">
-                                <span class="block text-sm font-bold text-slate-700 group-hover:text-blue-700">
-                                    {{ equipo.nombre }}
-                                </span>
-                            </div>
+                    <label class="team-item relative flex items-center p-3 rounded-xl border border-slate-100 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer transition-all group select-none">
+                        <input type="checkbox" name="equipos" value="{{ equipo.pk }}" onchange="actualizarContador()"
+                               class="peer w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer">
+
+                        <div class="ml-3 flex items-center gap-3 overflow-hidden">
+                            {% if equipo.escudo %}
+                                <img src="{{ equipo.escudo }}" class="w-8 h-8 object-contain" alt="">
+                            {% else %}
+                                <div class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"><i class="ph ph-shield"></i></div>
+                            {% endif %}
+
+                            <span class="block text-sm font-bold text-slate-600 peer-checked:text-blue-700 truncate">
+                                {{ equipo.nombre }}
+                            </span>
                         </div>
+
+                        <i class="ph ph-check-circle absolute right-3 text-blue-600 opacity-0 peer-checked:opacity-100 transition-opacity transform scale-75 peer-checked:scale-100"></i>
+                        <div class="absolute inset-0 border-2 border-blue-500 rounded-xl opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity"></div>
                     </label>
                     {% empty %}
-                        <p class="text-gray-500 p-4 col-span-2 text-center">No hay equipos disponibles en la base de datos.</p>
+                        <div class="col-span-2 flex flex-col items-center justify-center py-10 text-slate-400">
+                            <i class="ph ph-ghost text-4xl mb-2"></i>
+                            <p>No hay equipos disponibles.</p>
+                        </div>
                     {% endfor %}
+                </div>
 
+                <div class="p-3 bg-slate-50 border-t border-slate-100 text-center text-xs text-slate-400">
+                    Desplázate para ver más equipos
                 </div>
             </div>
         </div>
@@ -91,6 +115,7 @@
 </div>
 
 <script>
+    // Buscador en tiempo real
     document.getElementById('teamSearch').addEventListener('input', function(e) {
         const text = e.target.value.toLowerCase();
         const items = document.querySelectorAll('.team-item');
@@ -104,15 +129,27 @@
             }
         });
     });
+
+    // Contador de seleccionados
+    function actualizarContador() {
+        const checked = document.querySelectorAll('input[name="equipos"]:checked').length;
+        document.getElementById('contadorEquipos').textContent = checked + " seleccionados";
+    }
 </script>
 
 <style>
-    input[type="checkbox"] {
-        width: 1.2rem;
-        height: 1.2rem;
-        border-radius: 0.375rem;
-        border-color: #cbd5e1;
-        color: #2563eb;
+    /* Estilos extra para los inputs del form generado por Django si no tienen clases */
+    input[type="text"], input[type="number"] {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        outline: none;
+        transition: all 0.2s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 </style>
 {% endblock %}
