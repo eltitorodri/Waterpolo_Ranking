@@ -260,32 +260,55 @@ def crear_ranking(request, categoria_id=None):
         'categoria': categoria_objetivo
     })
 
+
 @login_required(login_url='login')
 def mis_rankings(request):
-    rankings = Ranking.objects.using('mongo_db') \
-        .filter(user_id=request.user.id) \
-        .order_by('-fecha_creacion')
+    # 1. LOGICA DE PERMISOS (EL CAMBIO CLAVE)
+    if request.user.is_staff:
+        # Si es ADMIN, ve TODOS los rankings de la base de datos
+        rankings = Ranking.objects.using('mongo_db').all().order_by('-fecha_creacion')
+    else:
+        # Si es USUARIO NORMAL, ve solo los suyos
+        rankings = Ranking.objects.using('mongo_db') \
+            .filter(user_id=request.user.id) \
+            .order_by('-fecha_creacion')
 
+    # 2. "HIDRATAR" LOS RANKINGS (ESTO SE QUEDA IGUAL QUE ANTES)
+    # Convertimos los IDs guardados en objetos Equipo reales
     for ranking in rankings:
-        ranking.lista_equipos = []
-        ids = [ranking.posicion_1_id, ranking.posicion_2_id, ranking.posicion_3_id, ranking.posicion_4_id,
-               ranking.posicion_5_id]
+        ranking.lista_equipos = []  # Lista temporal para el HTML
 
-        for id_str in ids:
+        ids_guardados = [
+            ranking.posicion_1_id, ranking.posicion_2_id,
+            ranking.posicion_3_id, ranking.posicion_4_id,
+            ranking.posicion_5_id
+        ]
+
+        for id_str in ids_guardados:
             if not id_str: continue
-            eq = None
+
+            equipo_encontrado = None
             try:
+                # Intento 1: Buscar por ObjectId
                 if ObjectId.is_valid(id_str):
-                    eq = Team.objects.using('mongo_db').filter(pk=ObjectId(id_str)).first()
-                if not eq:
-                    eq = Team.objects.using('mongo_db').filter(nombre=id_str).first()
+                    equipo_encontrado = Team.objects.using('mongo_db').filter(pk=ObjectId(id_str)).first()
+
+                # Intento 2: Buscar por ID numérico (si hubiera mezcla de datos viejos)
+                if not equipo_encontrado:
+                    equipo_encontrado = Team.objects.using('mongo_db').filter(id=id_str).first()
+
+                # Intento 3: Buscar por Nombre (por si acaso)
+                if not equipo_encontrado:
+                    equipo_encontrado = Team.objects.using('mongo_db').filter(nombre=id_str).first()
             except:
                 pass
 
-            if eq: ranking.lista_equipos.append(eq)
+            if equipo_encontrado:
+                ranking.lista_equipos.append(equipo_encontrado)
 
-    return render(request, 'rankingWaterpolo/mis_rankings.html', {'rankings': rankings})
-
+    return render(request, 'rankingWaterpolo/mis_rankings.html', {
+        'rankings': rankings
+    })
 
 # --- 5. OTRAS FUNCIONES ---
 
