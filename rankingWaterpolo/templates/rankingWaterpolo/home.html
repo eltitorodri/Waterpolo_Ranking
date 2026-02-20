@@ -34,7 +34,7 @@
     <div class="animate-fade-in mb-20">
         <div class="mb-10 text-center">
             <h1 class="text-4xl font-black text-slate-900 mb-2">Panel de <span class="text-blue-600">Gestión</span></h1>
-            <p class="text-slate-500">Configuración avanzada y carga masiva de datos.</p>
+            <p class="text-slate-500">Configuración avanzada, carga masiva de datos y control de usuarios.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
@@ -62,9 +62,15 @@
                     </div>
                 </div>
 
-                <a href="{% url 'crear_categoria' %}" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 rounded-3xl transition flex items-center justify-center gap-3 shadow-lg transform hover:-translate-y-1">
-                    <i class="ph ph-plus-circle text-2xl text-green-400"></i> Nueva Categoría
-                </a>
+                <div class="space-y-4">
+                    <a href="{% url 'crear_categoria' %}" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-3xl transition flex items-center justify-center gap-3 shadow-lg transform hover:-translate-y-1">
+                        <i class="ph ph-plus-circle text-2xl text-green-400"></i> Nueva Categoría
+                    </a>
+
+                    <a href="{% url 'gestionar_usuarios' %}" class="w-full bg-white border-2 border-slate-800 hover:bg-slate-50 text-slate-800 font-bold py-4 rounded-3xl transition flex items-center justify-center gap-3 shadow-sm transform hover:-translate-y-1">
+                        <i class="ph-fill ph-users-three text-2xl text-purple-600"></i> Gestionar Usuarios
+                    </a>
+                </div>
             </div>
 
             <div class="lg:col-span-2">
