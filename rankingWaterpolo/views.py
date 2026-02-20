@@ -12,7 +12,7 @@ import io
 
 # Importamos tus modelos y formularios
 from .models import Team, Ranking, Categoria, Valoracion
-from .forms import CategoriaForm, CSVImportForm
+from .forms import CategoriaForm, CSVImportForm, ValoracionForm
 
 
 # --- 1. AUTENTICACIÓN ---
@@ -54,6 +54,8 @@ def home(request):
     section = request.GET.get('section', 'categorias')
     query = request.GET.get('q')
 
+    print(f"--- DEBUG HOME --- Seccion: {section}, Query: {query}")
+
     # Filtro de categorías
     if query:
         categorias = Categoria.objects.using('mongo_db').filter(nombre__icontains=query)
@@ -69,7 +71,8 @@ def home(request):
     max_media = -1
 
     for equipo in equipos:
-        vals_equipo = Valoracion.objects.using('mongo_db').filter(equipo=equipo)
+        # Usamos equipo.pk o _id para filtrar valoraciones en Mongo
+        vals_equipo = Valoracion.objects.using('mongo_db').filter(equipo_id=equipo.pk)
         if vals_equipo.exists():
             promedio = sum(v.puntuacion for v in vals_equipo) / vals_equipo.count()
             equipo.media_puntos = round(promedio, 1)
@@ -101,29 +104,24 @@ def crear_categoria(request):
 
         # Validación especial: Si falla solo por 'equipos', lo ignoramos
         if not form.is_valid() and 'equipos' in form.errors and len(form.errors) == 1:
-            pass  # Ignoramos error de equipos porque lo hacemos manual
+            pass
 
-        # Verificamos si el nombre es válido (lo más importante)
+            # Verificamos si el nombre es válido
         if form.cleaned_data.get('nombre') and (form.is_valid() or ('equipos' in form.errors)):
             try:
                 nombre_cat = form.cleaned_data.get('nombre')
 
-                # 1. Guardamos la categoría (sin commit si es necesario para asignar user)
+                # 1. Guardamos la categoría
                 categoria_guardada = form.save(commit=False)
-                if hasattr(categoria_guardada, 'user'):
-                    categoria_guardada.user = request.user
-
+                # No asignamos user si el modelo Categoria no tiene campo 'user'
                 categoria_guardada.save(using='mongo_db')
-                print(f"DEBUG: Categoría guardada inicialmente.")
+                print(f"DEBUG: Categoría '{nombre_cat}' guardada inicialmente.")
 
-                # --- 2. EL CAMBIO CLAVE: RECARGA SEGURA ---
-                # En lugar de refresh_from_db(), la buscamos por su NOMBRE único.
-                # Esto nos da el ObjectId real (6995...) sin fallar.
+                # --- 2. RECARGA SEGURA POR NOMBRE ---
                 try:
                     categoria_real = Categoria.objects.using('mongo_db').get(nombre=nombre_cat)
                     print(f"DEBUG: Recarga exitosa. ID Real: {categoria_real.pk}")
                 except Exception as e:
-                    # Si falla esto, es gravísimo, pero usaremos lo que tengamos
                     print(f"DEBUG: Falló la recarga por nombre: {e}")
                     categoria_real = categoria_guardada
 
@@ -134,13 +132,11 @@ def crear_categoria(request):
                 if ids_equipos_seleccionados:
                     for id_str in ids_equipos_seleccionados:
                         try:
-                            # Buscamos equipo por ID
-                            if ObjectId.is_valid(id_str):
-                                equipo = Team.objects.using('mongo_db').get(pk=ObjectId(id_str))
-                            else:
-                                equipo = Team.objects.using('mongo_db').get(pk=id_str)
+                            # Buscamos equipo por ID manejando ObjectId
+                            oid = ObjectId(id_str) if ObjectId.is_valid(id_str) else id_str
+                            equipo = Team.objects.using('mongo_db').get(pk=oid)
 
-                            # Asignamos la categoría RECARGADA (la que tiene el ID bueno)
+                            # Asignamos la categoría RECARGADA
                             equipo.categoria = categoria_real
                             equipo.save(using='mongo_db')
                             conteo += 1
@@ -155,7 +151,6 @@ def crear_categoria(request):
                 messages.error(request, f"Error del sistema: {e}")
         else:
             print(f"DEBUG: Formulario inválido: {form.errors}")
-            # Mensaje específico si el nombre ya existe
             if 'nombre' in form.errors:
                 messages.error(request, f"Error: {form.errors['nombre'][0]}")
             else:
@@ -169,68 +164,38 @@ def crear_categoria(request):
         'equipos': equipos_para_html
     })
 
+
 # --- 4. RANKINGS (SOLUCIÓN FORENSE / MANUAL) ---
 
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
+    print("🚀 Inicio de crear_ranking")
     categoria_objetivo = None
     equipos = []
 
-    # --- FASE 1: OBTENER EQUIPOS ---
+    # --- FASE 1: Obtener equipos
     if categoria_id:
-        # A) Buscar la Categoría Objetivo
+        print(f"🔹 Buscando categoría por ID: {categoria_id}")
         try:
-            if ObjectId.is_valid(categoria_id):
-                categoria_objetivo = Categoria.objects.using('mongo_db').filter(_id=ObjectId(categoria_id)).first()
+            oid = ObjectId(categoria_id) if ObjectId.is_valid(categoria_id) else categoria_id
+            categoria_objetivo = Categoria.objects.using('mongo_db').filter(pk=oid).first()
 
-            if not categoria_objetivo:
-                # Intento secundario por ID normal
-                categoria_objetivo = Categoria.objects.using('mongo_db').filter(pk=categoria_id).first()
+            if categoria_objetivo:
+                print(f"✅ Encontrada categoría: {categoria_objetivo.nombre}")
+                # Filtramos equipos vinculados a esta categoría en Mongo
+                equipos = list(Team.objects.using('mongo_db').filter(categoria_id=categoria_objetivo.pk))
+                print(f"🔹 Equipos encontrados para esta categoría: {len(equipos)}")
+            else:
+                print("⚠️ Categoría no encontrada")
         except Exception as e:
-            print(f"Error buscando categoría: {e}")
-
-        if categoria_objetivo:
-            target_name = categoria_objetivo.nombre
-
-            # B) Cargar TODO para evitar errores de "Identidad Disociada" de Mongo/Django
-            # Esto es necesario porque algunos equipos pueden tener ID numérico (31) y otros ObjectId.
-            todas_las_cats = list(Categoria.objects.using('mongo_db').all())
-            todos_los_equipos = Team.objects.using('mongo_db').all()
-
-            for e in todos_los_equipos:
-                try:
-                    # Obtenemos el ID crudo saltándonos a Django
-                    raw_cat_id = e.__dict__.get('categoria_id')
-
-                    if not raw_cat_id:
-                        continue
-
-                        # Buscamos manualmente la categoría padre de este equipo
-                    cat_del_equipo = None
-                    for cat in todas_las_cats:
-                        # Comprobamos si coincide con el ObjectId o con el ID int
-                        if str(cat.pk) == str(raw_cat_id) or (hasattr(cat, 'id') and str(cat.id) == str(raw_cat_id)):
-                            cat_del_equipo = cat
-                            break
-
-                    # Si encontramos al padre, verificamos si es la categoría que estamos viendo (por nombre)
-                    if cat_del_equipo and cat_del_equipo.nombre == target_name:
-                        equipos.append(e)
-
-                except Exception as ex:
-                    continue
-
-            if not equipos:
-                messages.warning(request, f"Categoría '{target_name}' encontrada, pero no tiene equipos vinculados.")
-        else:
-            messages.error(request, "Categoría no encontrada.")
-            return redirect('home')
+            print(f"❌ ERROR buscando categoría: {e}")
     else:
-        # Si no hay ID, mostramos todos (Ranking General)
-        equipos = Team.objects.using('mongo_db').all()
+        equipos = list(Team.objects.using('mongo_db').all())
+        print(f"🔹 Ranking general: {len(equipos)} equipos cargados")
 
-    # --- FASE 2: GUARDAR RANKING (POST) ---
+    # --- FASE 2: Guardar ranking
     if request.method == 'POST':
+        print("💾 POST recibido para guardar ranking")
         p1 = request.POST.get('posicion_1')
         p2 = request.POST.get('posicion_2')
         p3 = request.POST.get('posicion_3')
@@ -238,23 +203,47 @@ def crear_ranking(request, categoria_id=None):
         p5 = request.POST.get('posicion_5')
         titulo = request.POST.get('titulo')
 
+        print(f"🔹 Datos recibidos: titulo='{titulo}', p1='{p1}', p2='{p2}', p3='{p3}', p4='{p4}', p5='{p5}'")
+
         if all([p1, p2, p3, p4, p5, titulo]):
             try:
-                Ranking.objects.using('mongo_db').create(
+                # Validamos IDs para que se guarden como strings limpios
+                ids_confirmados = []
+                for idx, pid in enumerate([p1, p2, p3, p4, p5], start=1):
+                    if ObjectId.is_valid(pid):
+                        ids_confirmados.append(str(pid))
+                    else:
+                        ids_confirmados.append(pid)
+
+                ranking_nuevo = Ranking(
                     user_id=request.user.id,
                     username=request.user.username,
-                    categoria=categoria_objetivo,  # Puede ser None si es general
+                    # Usamos el ID directamente si existe
+                    categoria_id=categoria_objetivo.pk if categoria_objetivo else None,
                     nombre=titulo,
-                    posicion_1_id=p1, posicion_2_id=p2, posicion_3_id=p3,
-                    posicion_4_id=p4, posicion_5_id=p5
+                    posicion_1_id=ids_confirmados[0],
+                    posicion_2_id=ids_confirmados[1],
+                    posicion_3_id=ids_confirmados[2],
+                    posicion_4_id=ids_confirmados[3],
+                    posicion_5_id=ids_confirmados[4],
                 )
+
+                print("🔹 Intentando save() en mongo_db...")
+                ranking_nuevo.save(using='mongo_db')
+
+                print("✅ Ranking guardado correctamente!")
                 messages.success(request, "¡Ranking creado con éxito!")
                 return redirect('mis_rankings')
             except Exception as e:
-                messages.error(request, f"Error al guardar: {e}")
+                import traceback
+                print(f"❌ ERROR al guardar ranking: {str(e)}")
+                traceback.print_exc()  # Esto nos dirá la línea exacta del fallo
+                messages.error(request, f"Error al guardar ranking: {e}")
         else:
+            print("⚠️ Faltan campos en el POST")
             messages.error(request, "Por favor, completa todos los campos.")
 
+    print("🏁 Fin de crear_ranking")
     return render(request, 'rankingWaterpolo/crear_top5.html', {
         'equipos': equipos,
         'categoria': categoria_objetivo
@@ -263,88 +252,88 @@ def crear_ranking(request, categoria_id=None):
 
 @login_required(login_url='login')
 def mis_rankings(request):
-    # 1. LOGICA DE PERMISOS (EL CAMBIO CLAVE)
-    if request.user.is_staff:
-        # Si es ADMIN, ve TODOS los rankings de la base de datos
-        rankings = Ranking.objects.using('mongo_db').all().order_by('-fecha_creacion')
-    else:
-        # Si es USUARIO NORMAL, ve solo los suyos
-        rankings = Ranking.objects.using('mongo_db') \
-            .filter(user_id=request.user.id) \
-            .order_by('-fecha_creacion')
+    print("🚀 Inicio de mis_rankings")
 
-    # 2. "HIDRATAR" LOS RANKINGS (ESTO SE QUEDA IGUAL QUE ANTES)
-    # Convertimos los IDs guardados en objetos Equipo reales
+    # 1. LOGICA DE PERMISOS
+    try:
+        if request.user.is_staff:
+            print("👑 Usuario staff: cargando todos los rankings")
+            rankings = list(Ranking.objects.using('mongo_db').all())
+        else:
+            print("👤 Usuario normal: cargando solo sus rankings")
+            rankings = list(Ranking.objects.using('mongo_db').filter(user_id=request.user.id))
+
+        # Ordenación manual por fecha
+        rankings.sort(key=lambda r: r.fecha_creacion if r.fecha_creacion else 0, reverse=True)
+        print(f"✅ {len(rankings)} rankings cargados")
+    except Exception as e:
+        print(f"❌ ERROR al cargar rankings: {e}")
+        rankings = []
+
+    # 2. HIDRATAR LOS RANKINGS (Cargar objetos Team desde los IDs guardados)
     for ranking in rankings:
-        ranking.lista_equipos = []  # Lista temporal para el HTML
-
+        print(f"🔹 Procesando ranking: {ranking.nombre}")
+        ranking.lista_equipos = []
         ids_guardados = [
             ranking.posicion_1_id, ranking.posicion_2_id,
             ranking.posicion_3_id, ranking.posicion_4_id,
             ranking.posicion_5_id
         ]
 
-        for id_str in ids_guardados:
+        for i, id_str in enumerate(ids_guardados, start=1):
             if not id_str: continue
 
             equipo_encontrado = None
             try:
-                # Intento 1: Buscar por ObjectId
-                if ObjectId.is_valid(id_str):
-                    equipo_encontrado = Team.objects.using('mongo_db').filter(pk=ObjectId(id_str)).first()
-
-                # Intento 2: Buscar por ID numérico (si hubiera mezcla de datos viejos)
-                if not equipo_encontrado:
-                    equipo_encontrado = Team.objects.using('mongo_db').filter(id=id_str).first()
-
-                # Intento 3: Buscar por Nombre (por si acaso)
-                if not equipo_encontrado:
-                    equipo_encontrado = Team.objects.using('mongo_db').filter(nombre=id_str).first()
-            except:
-                pass
+                oid = ObjectId(id_str) if ObjectId.is_valid(id_str) else id_str
+                equipo_encontrado = Team.objects.using('mongo_db').filter(pk=oid).first()
+            except Exception as e:
+                print(f"❌ ERROR buscando equipo {id_str}: {e}")
 
             if equipo_encontrado:
                 ranking.lista_equipos.append(equipo_encontrado)
 
+    print("🏁 Fin de mis_rankings")
     return render(request, 'rankingWaterpolo/mis_rankings.html', {
         'rankings': rankings
     })
+
 
 # --- 5. OTRAS FUNCIONES ---
 
 @login_required(login_url='login')
 def valorar_equipos(request):
     if request.method == 'POST':
+        # ... (el código del POST se queda igual)
         team_id = request.POST.get('team_id')
         puntos = request.POST.get('puntuacion')
         comentario = request.POST.get('comentario')
-
         if team_id and puntos:
             try:
-                mongo_id = ObjectId(team_id)
-                equipo = Team.objects.using('mongo_db').get(_id=mongo_id)
-
-                val = Valoracion.objects.using('mongo_db').filter(equipo=equipo, usuario_id=request.user.id).first()
-                if val:
-                    val.puntuacion = int(puntos)
-                    val.comentario = comentario
-                    val.save()
-                else:
-                    Valoracion.objects.using('mongo_db').create(
-                        equipo=equipo, usuario_id=request.user.id, puntuacion=int(puntos), comentario=comentario
-                    )
+                oid = ObjectId(team_id) if ObjectId.is_valid(team_id) else team_id
+                equipo = Team.objects.using('mongo_db').get(pk=oid)
+                val, created = Valoracion.objects.using('mongo_db').update_or_create(
+                    equipo_id=equipo.pk,
+                    usuario_id=request.user.id,
+                    defaults={'puntuacion': int(puntos), 'comentario': comentario}
+                )
                 messages.success(request, f"Valorado: {equipo.nombre}")
             except Exception as e:
-                messages.error(request, f"Error: {e}")
+                print(f"❌ ERROR valoración: {e}")
         return redirect('valorar_equipos')
 
-    equipos = Team.objects.using('mongo_db').all().order_by('nombre')
-    for equipo in equipos:
-        equipo.mi_valoracion = Valoracion.objects.using('mongo_db').filter(equipo=equipo,
-                                                                           usuario_id=request.user.id).first()
+    # --- CAMBIO AQUÍ: Quitamos el .order_by() de la base de datos ---
+    equipos_list = list(Team.objects.using('mongo_db').all())
+    # Ordenamos con Python para que Djongo no explote
+    equipos_list.sort(key=lambda x: x.nombre.lower())
 
-    return render(request, 'rankingWaterpolo/valorar_equipos.html', {'equipos': equipos})
+    for equipo in equipos_list:
+        equipo.mi_valoracion = Valoracion.objects.using('mongo_db').filter(
+            equipo_id=equipo.pk,
+            usuario_id=request.user.id
+        ).first()
 
+    return render(request, 'rankingWaterpolo/valorar_equipos.html', {'equipos': equipos_list})
 
 @staff_member_required(login_url='home')
 def importar_equipos_csv(request):
@@ -352,32 +341,35 @@ def importar_equipos_csv(request):
         form = CSVImportForm(request.POST, request.FILES)
         if form.is_valid():
             archivo = request.FILES['archivo_csv']
-            data_set = archivo.read().decode('UTF-8')
-            io_string = io.StringIO(data_set)
-            next(io_string)
+            try:
+                data_set = archivo.read().decode('UTF-8')
+                io_string = io.StringIO(data_set)
+                next(io_string)  # Saltar cabecera
 
-            conteo = 0
-            for row in csv.reader(io_string, delimiter=',', quotechar='"'):
-                try:
-                    nombre_equipo = row[0]
-                    cat_obj = None
-                    if len(row) > 7 and row[7]:
-                        cat_obj = Categoria.objects.using('mongo_db').filter(nombre=row[7]).first()
+                conteo = 0
+                for row in csv.reader(io_string, delimiter=',', quotechar='"'):
+                    try:
+                        nombre_equipo = row[0]
+                        cat_obj = None
+                        if len(row) > 7 and row[7]:
+                            cat_obj = Categoria.objects.using('mongo_db').filter(nombre=row[7]).first()
 
-                    Team.objects.using('mongo_db').create(
-                        nombre=nombre_equipo,
-                        escudo=row[1] if row[1] else "",
-                        liga=row[2] if len(row) > 2 else "",
-                        sexo=row[3] if len(row) > 3 else "",
-                        entrenador=row[4] if len(row) > 4 else "",
-                        piscina=row[5] if len(row) > 5 else "",
-                        ciudad=row[6] if len(row) > 6 else "",
-                        categoria=cat_obj
-                    )
-                    conteo += 1
-                except:
-                    continue
+                        Team.objects.using('mongo_db').create(
+                            nombre=nombre_equipo,
+                            escudo=row[1] if row[1] else "",
+                            liga=row[2] if len(row) > 2 else "",
+                            sexo=row[3] if len(row) > 3 else "",
+                            entrenador=row[4] if len(row) > 4 else "",
+                            piscina=row[5] if len(row) > 5 else "",
+                            ciudad=row[6] if len(row) > 6 else "",
+                            categoria=cat_obj
+                        )
+                        conteo += 1
+                    except Exception as e:
+                        print(f"⚠️ Error en fila CSV: {e}")
+                        continue
 
-            messages.success(request, f"¡Éxito! {conteo} equipos importados.")
-            return redirect('home')
+                messages.success(request, f"¡Éxito! {conteo} equipos importados.")
+            except Exception as e:
+                messages.error(request, f"Error al procesar el archivo: {e}")
     return redirect('home')

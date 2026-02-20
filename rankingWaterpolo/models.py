@@ -2,11 +2,10 @@ from djongo import models
 from django.contrib.auth.models import User
 
 
+# --- 1. CATEGORÍAS ---
 class Categoria(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
-
-    # --- NUEVOS CAMPOS ---
     temporada = models.CharField(
         max_length=50,
         default="2024/25",
@@ -18,21 +17,28 @@ class Categoria(models.Model):
         blank=True,
         verbose_name="Logo/Imagen"
     )
-    # ---------------------
 
-    equipos = models.ManyToManyField('Team', related_name='categorias_asignadas')
+    # En Mongo/Djongo, ManyToMany se guarda como una lista de IDs internamente
+    equipos = models.ManyToManyField('Team', related_name='categorias_asignadas', blank=True)
 
     def __str__(self):
         return self.nombre
 
+
 # --- 2. EQUIPOS (Team) ---
 class Team(models.Model):
-    _id = models.ObjectIdField(primary_key=True)  # Asegúrate de que tenga primary_key=True para evitar líos
+    _id = models.ObjectIdField(primary_key=True)
     nombre = models.CharField(max_length=100)
     escudo = models.URLField(max_length=500, blank=True, null=True)
 
-    # Aquí también usamos 'Categoria' con comillas por coherencia
-    categoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, related_name='equipos_originales', null=True)
+    # FK a Categoria (dentro de la misma DB Mongo)
+    categoria = models.ForeignKey(
+        'Categoria',
+        on_delete=models.SET_NULL,
+        related_name='equipos_originales',
+        null=True,
+        blank=True
+    )
 
     liga = models.CharField(max_length=100)
     sexo = models.CharField(max_length=20)
@@ -52,10 +58,10 @@ class Team(models.Model):
 # --- 3. VALORACIONES ---
 class Valoracion(models.Model):
     _id = models.ObjectIdField(primary_key=True)
-
-    # Aquí ya podemos usar Team sin comillas porque Team está definido arriba,
-    # pero ponerlas tampoco hace daño.
     equipo = models.ForeignKey('Team', on_delete=models.CASCADE, related_name='valoraciones')
+
+    # IMPORTANTE: Guardamos el ID del usuario (de SQLite) como Integer
+    # porque Mongo no puede hacer un JOIN real con la tabla de SQLite
     usuario_id = models.IntegerField()
     puntuacion = models.IntegerField(help_text="Puntuación del 1 al 10")
     comentario = models.TextField(blank=True)
@@ -63,27 +69,23 @@ class Valoracion(models.Model):
 
     class Meta:
         verbose_name = "Valoración"
+        verbose_name_plural = "Valoraciones"
 
     def __str__(self):
-        return f"Valoración de {self.equipo.nombre}: {self.puntuacion}"
+        return f"Val: {self.puntuacion} - {self.equipo.nombre}"
 
 
 # --- 4. RANKINGS ---
-from djongo import models
-from django.contrib.auth.models import User
-
 class Ranking(models.Model):
     _id = models.ObjectIdField(primary_key=True)
-
     user_id = models.IntegerField()
     username = models.CharField(max_length=150)
 
     categoria = models.ForeignKey('Categoria', on_delete=models.SET_NULL, null=True, blank=True)
-
     nombre = models.CharField(max_length=100, default="Mi Top 5")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    # Guardamos el ObjectId de los equipos directamente como strings
+    # IDs de equipos guardados como strings de 24 caracteres (formato hexadecimal de ObjectId)
     posicion_1_id = models.CharField(max_length=24)
     posicion_2_id = models.CharField(max_length=24)
     posicion_3_id = models.CharField(max_length=24)
@@ -91,5 +93,4 @@ class Ranking(models.Model):
     posicion_5_id = models.CharField(max_length=24)
 
     def __str__(self):
-        cat_nombre = self.categoria.nombre if self.categoria else "General"
-        return f"{self.username} - {cat_nombre}"
+        return f"{self.username} - {self.nombre}"
