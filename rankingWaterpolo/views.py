@@ -373,3 +373,112 @@ def importar_equipos_csv(request):
             except Exception as e:
                 messages.error(request, f"Error al procesar el archivo: {e}")
     return redirect('home')
+
+
+@staff_member_required(login_url='home')
+def editar_categoria(request, categoria_id):
+    # 1. Buscar la categoría por su ObjectId de Mongo
+    try:
+        oid = ObjectId(categoria_id) if ObjectId.is_valid(categoria_id) else categoria_id
+        categoria = Categoria.objects.using('mongo_db').get(pk=oid)
+    except Exception as e:
+        messages.error(request, "Categoría no encontrada.")
+        return redirect('home')
+
+    # 2. Cargar todos los equipos y los que ya pertenecen a esta categoría
+    # (Al estar en Django 3.1, ordenamos con Python por seguridad)
+    todos_los_equipos = list(Team.objects.using('mongo_db').all())
+    todos_los_equipos.sort(key=lambda x: x.nombre.lower())
+
+    equipos_actuales = Team.objects.using('mongo_db').filter(categoria=categoria)
+    ids_actuales = [str(eq.pk) for eq in equipos_actuales]
+
+    # 3. Procesar el formulario cuando el admin le da a Guardar
+    if request.method == 'POST':
+        nuevo_nombre = request.POST.get('nombre')
+        equipos_seleccionados = request.POST.getlist('equipos')  # IDs que el admin ha marcado
+
+        # Actualizamos el nombre si ha cambiado
+        if nuevo_nombre and nuevo_nombre != categoria.nombre:
+            categoria.nombre = nuevo_nombre
+            categoria.save(using='mongo_db')
+
+        # A) Desvincular equipos que el admin ha desmarcado
+        for equipo in equipos_actuales:
+            if str(equipo.pk) not in equipos_seleccionados:
+                equipo.categoria = None
+                equipo.save(using='mongo_db')
+
+        # B) Vincular los equipos que el admin ha marcado
+        if equipos_seleccionados:
+            for id_str in equipos_seleccionados:
+                # Solo actualizamos si no estaba ya en la categoría para ahorrar consultas
+                if id_str not in ids_actuales:
+                    try:
+                        eq_oid = ObjectId(id_str) if ObjectId.is_valid(id_str) else id_str
+                        equipo_a_vincular = Team.objects.using('mongo_db').get(pk=eq_oid)
+                        equipo_a_vincular.categoria = categoria
+                        equipo_a_vincular.save(using='mongo_db')
+                    except Exception as e:
+                        print(f"⚠️ Error vinculando equipo {id_str}: {e}")
+
+        messages.success(request, f"Categoría '{categoria.nombre}' actualizada con éxito.")
+        return redirect('home')
+
+    return render(request, 'rankingWaterpolo/editar_categoria.html', {
+        'categoria': categoria,
+        'todos_los_equipos': todos_los_equipos,
+        'equipos_actuales_ids': ids_actuales
+    })
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+
+
+# 1. Ver la lista de usuarios
+@staff_member_required  # Esto protege la vista para que solo entre el staff/admin
+def gestionar_usuarios(request):
+    # Traemos todos los usuarios, ordenados para que los superadmins salgan primero
+    usuarios = User.objects.all().order_by('-is_superuser', '-is_active', 'username')
+    return render(request, 'rankingWaterpolo/gestionar_usuarios.html', {'usuarios': usuarios})
+
+
+# 2. Editar un usuario
+@staff_member_required
+def editar_usuario(request, usuario_id):
+    usuario = get_object_or_404(User, id=usuario_id)
+
+    if request.method == 'POST':
+        # Recogemos los datos del formulario a mano (es más rápido que crear un forms.py)
+        usuario.username = request.POST.get('username')
+        usuario.email = request.POST.get('email')
+
+        # Los checkboxes en HTML devuelven 'on' si están marcados
+        usuario.is_active = request.POST.get('is_active') == 'on'
+        usuario.is_staff = request.POST.get('is_staff') == 'on'
+        usuario.is_superuser = request.POST.get('is_superuser') == 'on'
+
+        usuario.save()
+        messages.success(request, f'Usuario {usuario.username} actualizado correctamente.')
+        return redirect('gestionar_usuarios')
+
+    # Le pasamos el usuario a la plantilla con el nombre 'usuario_edit'
+    return render(request, 'rankingWaterpolo/editar_usuario.html', {'usuario_edit': usuario})
+
+
+# 3. Eliminar un usuario
+@staff_member_required
+def eliminar_usuario(request, usuario_id):
+    usuario = get_object_or_404(User, id=usuario_id)
+
+    # Doble check de seguridad: no te puedes borrar a ti mismo
+    if request.user.id != usuario.id:
+        usuario.delete()
+        messages.success(request, 'Usuario eliminado para siempre.')
+    else:
+        messages.error(request, '¡Ey! No puedes eliminarte a ti mismo.')
+
+    return redirect('gestionar_usuarios')

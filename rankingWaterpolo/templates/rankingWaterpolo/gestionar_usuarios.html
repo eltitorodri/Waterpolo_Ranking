@@ -1,0 +1,113 @@
+{% extends 'rankingWaterpolo/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4 animate-fade-in mb-24">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 border-b border-slate-200 pb-6">
+        <div>
+            <span class="text-blue-600 font-bold text-sm tracking-wider uppercase mb-1 block">Panel de Administración</span>
+            <h1 class="text-4xl font-black text-slate-900 tracking-tight">
+                Gestión de <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Usuarios</span>
+            </h1>
+            <p class="text-slate-500 mt-2 text-lg">Administra los accesos, roles y el estado de las cuentas de la plataforma.</p>
+        </div>
+        <div class="flex gap-3 shrink-0">
+            <a href="{% url 'home' %}" class="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-5 rounded-xl transition flex items-center gap-2 shadow-sm">
+                <i class="ph ph-arrow-left text-lg"></i> Volver
+            </a>
+            <a href="#" class="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-2.5 px-5 rounded-xl transition flex items-center gap-2 shadow-md shadow-blue-200/50 transform active:scale-95">
+                <i class="ph ph-user-plus text-lg"></i> Nuevo Usuario
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 rounded-bl-full -mr-20 -mt-20 z-0 pointer-events-none"></div>
+        
+        <div class="relative z-10">
+            <div class="hidden md:grid grid-cols-12 gap-4 bg-slate-50/80 p-5 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <div class="col-span-4">Usuario</div>
+                <div class="col-span-3">Rol</div>
+                <div class="col-span-2 text-center">Estado</div>
+                <div class="col-span-3 text-right">Acciones</div>
+            </div>
+
+            <div class="divide-y divide-slate-50">
+                {% for usuario in usuarios %}
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-5 hover:bg-slate-50/50 transition-colors group">
+                    
+                    <div class="col-span-1 md:col-span-4 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-300 flex items-center justify-center text-slate-600 font-black shadow-sm group-hover:scale-105 transition-transform shrink-0">
+                            {{ usuario.username|slice:":2"|upper }}
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="font-bold text-slate-800 truncate" title="{{ usuario.username }}">{{ usuario.username }}</p>
+                            <p class="text-xs text-slate-500 truncate" title="{{ usuario.email }}">{{ usuario.email|default:"Sin email registrado" }}</p>
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 md:col-span-3 flex items-center md:justify-start">
+                        {% if usuario.is_superuser %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                <i class="ph-fill ph-crown text-sm"></i> Súper Admin
+                            </span>
+                        {% elif usuario.is_staff %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                <i class="ph-fill ph-shield-check text-sm"></i> Staff / Gestor
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                <i class="ph-fill ph-user text-sm"></i> Usuario Base
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2 flex items-center md:justify-center">
+                        {% if usuario.is_active %}
+                            <span class="flex items-center gap-2 text-sm font-bold text-emerald-600">
+                                <span class="relative flex h-2.5 w-2.5">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                                </span>
+                                Activo
+                            </span>
+                        {% else %}
+                            <span class="flex items-center gap-2 text-sm font-bold text-red-500">
+                                <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span>
+                                Inactivo
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-span-1 md:col-span-3 flex items-center justify-start md:justify-end gap-2 mt-2 md:mt-0">
+                        <a href="{% url 'editar_usuario' usuario.id %}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip-trigger" title="Editar usuario">
+                            <i class="ph ph-pencil-simple text-xl"></i>
+                        </a>
+                        
+                        {% if request.user.id != usuario.id %}
+                        <a href="{% url 'eliminar_usuario' usuario.id %}" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip-trigger" title="Eliminar usuario">
+                            <i class="ph ph-trash text-xl"></i>
+                        </a>
+                        {% else %}
+                        <span class="p-2 text-slate-200 cursor-not-allowed" title="No puedes eliminarte a ti mismo">
+                            <i class="ph ph-trash text-xl"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                </div>
+                {% empty %}
+                <div class="p-12 text-center flex flex-col items-center">
+                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                        <i class="ph ph-users-slash text-4xl text-slate-300"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 mb-1">No hay usuarios</h3>
+                    <p class="text-slate-500">Todavía no hay usuarios registrados en el sistema.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

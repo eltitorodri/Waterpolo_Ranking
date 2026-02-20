@@ -24,6 +24,11 @@ urlpatterns = [
     path('crear-categoria/', views.crear_categoria, name='crear_categoria'),
     # En urlpatterns añade:
     path('importar-equipos-csv/', views.importar_equipos_csv, name='importar_equipos_csv'),
+    path('editar-categoria/<str:categoria_id>/', views.editar_categoria, name='editar_categoria'),
+
+    path('gestionar-usuarios/', views.gestionar_usuarios, name='gestionar_usuarios'),
+    path('editar-usuario/<int:usuario_id>/', views.editar_usuario, name='editar_usuario'),
+    path('eliminar-usuario/<int:usuario_id>/', views.eliminar_usuario, name='eliminar_usuario'),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,127 @@
+{% extends 'rankingWaterpolo/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto py-8 px-4 animate-fade-in mb-24">
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 border-b border-slate-200 pb-6">
+        <div>
+            <span class="text-blue-600 font-bold text-sm tracking-wider uppercase mb-1 block">Panel de Administración</span>
+            <h1 class="text-4xl font-black text-slate-900 tracking-tight">
+                Editar <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">{{ categoria.nombre }}</span>
+            </h1>
+            <p class="text-slate-500 mt-2 text-lg">Gestiona el nombre y los equipos que compiten en esta categoría.</p>
+        </div>
+        <a href="{% url 'home' %}" class="bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-5 rounded-xl transition flex items-center gap-2 shadow-sm shrink-0">
+            <i class="ph ph-arrow-left text-lg"></i> Volver al panel
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-8">
+        {% csrf_token %}
+
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden group hover:shadow-md transition-shadow">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-bl-full -mr-10 -mt-10 z-0 transition-transform group-hover:scale-110"></div>
+
+            <div class="relative z-10">
+                <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <i class="ph ph-pencil-line text-blue-500 text-2xl"></i> Datos Generales
+                </h3>
+
+                <div class="w-full md:w-2/3 lg:w-1/2">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Nombre de la Categoría</label>
+                    <div class="relative">
+                        <i class="ph ph-text-aa absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+                        <input type="text" name="nombre" value="{{ categoria.nombre }}"
+                               class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white focus:outline-none transition font-bold text-slate-800 text-lg" required placeholder="Ej: Primera División Masculina">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2 mb-1">
+                        <i class="ph ph-users-three text-blue-500 text-2xl"></i> Gestión de Equipos
+                    </h3>
+                    <p class="text-sm text-slate-500">Haz clic en las tarjetas para añadir o quitar equipos de esta liga.</p>
+                </div>
+                <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 px-4 py-2 rounded-xl">
+                    <span class="relative flex h-3 w-3">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                    </span>
+                    <span class="text-sm font-bold text-blue-700">Total en Base de Datos: {{ todos_los_equipos|length }}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 max-h-[600px] overflow-y-auto p-2 custom-scrollbar">
+                {% for equipo in todos_los_equipos %}
+                <label class="relative cursor-pointer group h-full">
+                    <input type="checkbox" name="equipos" value="{{ equipo.pk }}"
+                           class="peer sr-only"
+                           {% if equipo.pk|stringformat:'s' in equipos_actuales_ids %}checked{% endif %}>
+
+                    <div class="h-full flex flex-col items-center text-center p-4 rounded-2xl border-2 transition-all duration-300
+                                bg-white border-slate-100 hover:border-blue-300 hover:bg-slate-50 hover:-translate-y-1
+                                peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:shadow-md peer-checked:shadow-blue-100/50">
+
+                        <div class="absolute top-2 right-2 text-blue-500 opacity-0 peer-checked:opacity-100 transition-opacity duration-300 scale-50 peer-checked:scale-100 transform">
+                            <i class="ph-fill ph-check-circle text-2xl"></i>
+                        </div>
+
+                        <div class="w-16 h-16 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-3 overflow-hidden p-1 group-hover:shadow-md transition-shadow">
+
+                            {% if equipo.foto %}
+                                <span class="font-black text-slate-400 text-xl hidden">{{ equipo.nombre|slice:":2"|upper }}</span>
+
+                                <img src="{% if equipo.foto.url %}{{ equipo.foto.url }}{% else %}{{ equipo.foto }}{% endif %}"
+                                     alt="{{ equipo.nombre }}"
+                                     class="w-full h-full object-contain rounded-full bg-white"
+                                     onerror="this.style.display='none'; this.previousElementSibling.classList.remove('hidden');">
+                            {% else %}
+                                <span class="font-black text-slate-400 text-xl">{{ equipo.nombre|slice:":2"|upper }}</span>
+                            {% endif %}
+
+                        </div>
+
+                        <span class="font-bold text-slate-700 text-sm line-clamp-2 w-full peer-checked:text-blue-800 transition-colors" title="{{ equipo.nombre }}">{{ equipo.nombre }}</span>
+
+                        <div class="mt-auto pt-3">
+                            <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-md transition-colors
+                                       bg-slate-100 text-slate-400 peer-checked:bg-blue-100 peer-checked:text-blue-600">
+                                <span class="block peer-checked:hidden">Click para añadir</span>
+                                <span class="hidden peer-checked:block">En categoría</span>
+                            </span>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-50">
+            <div class="max-w-6xl mx-auto flex justify-between items-center px-4">
+                <span class="text-slate-500 font-medium hidden sm:block">Asegúrate de revisar los equipos antes de guardar.</span>
+                <div class="flex gap-4 w-full sm:w-auto">
+                    <a href="{% url 'home' %}" class="w-1/2 sm:w-auto px-6 py-3 text-slate-600 font-bold bg-slate-100 hover:bg-slate-200 rounded-xl transition text-center">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="w-1/2 sm:w-auto px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-blue-600 transition shadow-lg shadow-blue-200/50 transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="ph ph-floppy-disk text-xl"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    /* Estilos de la barra de desplazamiento para que quede elegante */
+    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f8fafc; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+{% endblock %}
