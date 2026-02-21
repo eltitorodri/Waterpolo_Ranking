@@ -108,15 +108,11 @@
                     const lines = text.split('\n');
                     container.innerHTML = ''; // Limpiar
 
-                    // Saltamos la cabecera (slice 1)
                     lines.slice(1).forEach(line => {
                         if (line.trim() === '') return;
-
-                        // Parsear CSV básico (Ojo: falla si hay comas dentro de comillas, pero para esto sirve)
                         const columns = line.split(',');
                         const nombre = columns[0];
                         const foto = columns[1];
-                        // Ajusta índices según tu CSV real
 
                         if (nombre) {
                             const item = document.createElement('div');
@@ -144,10 +140,18 @@
 
     <div class="mb-10 text-center animate-fade-in">
         <h1 class="text-4xl font-black text-blue-900 mb-2">
-            Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
+            {% if user.is_staff %}
+                Panel de <span class="text-blue-500">Supervisión</span>
+            {% else %}
+                Bienvenido a la piscina, <span class="text-blue-500">{{ user.username|title }}</span>
+            {% endif %}
         </h1>
         <p class="text-slate-500 max-w-2xl mx-auto">
-            Gestiona tus rankings, consulta estadísticas y valora a los equipos de la liga.
+            {% if user.is_staff %}
+                Modo Administrador: Supervisa los rankings globales y gestiona las categorías del sistema.
+            {% else %}
+                Gestiona tus rankings, consulta estadísticas y valora a los equipos de la liga.
+            {% endif %}
         </p>
     </div>
 
@@ -186,6 +190,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {% if not user.is_staff %}
         <a href="{% url 'crear_top5' %}" class="group bg-blue-600 p-6 rounded-2xl shadow-lg shadow-blue-200/50 flex flex-col justify-between hover:bg-blue-700 hover:-translate-y-1 transition duration-300">
             <div class="flex justify-between items-start mb-4">
                 <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
@@ -198,21 +203,22 @@
                 <p class="text-blue-100 text-sm">Crea un Top 5 general.</p>
             </div>
         </a>
+        {% endif %}
 
-        <a href="{% url 'valorar_equipos' %}" class="group bg-amber-500 p-6 rounded-2xl shadow-lg shadow-amber-200/50 flex flex-col justify-between hover:bg-amber-600 hover:-translate-y-1 transition duration-300">
+        <a href="{% url 'valorar_equipos' %}" class="group {% if user.is_staff %}bg-slate-700 hover:bg-slate-800 shadow-slate-200/50 md:col-span-1{% else %}bg-amber-500 hover:bg-amber-600 shadow-amber-200/50{% endif %} p-6 rounded-2xl shadow-lg flex flex-col justify-between hover:-translate-y-1 transition duration-300">
             <div class="flex justify-between items-start mb-4">
                 <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-white">
-                    <i class="ph ph-star-half text-2xl"></i>
+                    <i class="ph {% if user.is_staff %}ph-eye{% else %}ph-star-half{% endif %} text-2xl"></i>
                 </div>
                 <i class="ph ph-arrow-right text-white opacity-50 group-hover:translate-x-1 transition-transform"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-white">Valorar Equipos</h3>
-                <p class="text-amber-100 text-sm">Puntúa y comenta.</p>
+                <h3 class="text-lg font-bold text-white">{% if user.is_staff %}Supervisar Valoraciones{% else %}Valorar Equipos{% endif %}</h3>
+                <p class="{% if user.is_staff %}text-slate-200{% else %}text-amber-100{% endif %} text-sm">{% if user.is_staff %}Revisa las puntuaciones globales.{% else %}Puntúa y comenta.{% endif %}</p>
             </div>
         </a>
 
-        <a href="{% url 'mis_rankings' %}" class="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-1 transition duration-300">
+        <a href="{% url 'mis_rankings' %}" class="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between hover:border-blue-300 hover:shadow-md hover:-translate-y-1 transition duration-300 {% if user.is_staff %}md:col-span-2{% endif %}">
             <div class="flex justify-between items-start mb-4">
                 <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
                     <i class="ph ph-users text-2xl"></i>
@@ -220,8 +226,12 @@
                 <i class="ph ph-arrow-right text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-transform"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">Mis Rankings</h3>
-                <p class="text-slate-400 text-sm">Consulta tu historial.</p>
+                <h3 class="text-lg font-bold text-slate-700 group-hover:text-blue-700">
+                    {% if user.is_staff %}Muro Global de Rankings{% else %}Mis Rankings{% endif %}
+                </h3>
+                <p class="text-slate-400 text-sm">
+                    {% if user.is_staff %}Revisa todas las publicaciones de los usuarios.{% else %}Consulta tu historial.{% endif %}
+                </p>
             </div>
         </a>
     </div>
@@ -247,7 +257,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
         {% for cat in categorias %}
-        <a href="{% url 'crear_ranking_categoria' cat.pk %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden flex flex-col h-full relative">
+        <a href="{% if user.is_staff %}#{% else %}{% url 'crear_ranking_categoria' cat.pk %}{% endif %}" class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group overflow-hidden flex flex-col h-full relative {% if user.is_staff %}cursor-default{% endif %}">
             <div class="h-36 bg-slate-50 flex items-center justify-center border-b border-slate-100 overflow-hidden relative">
                 {% if cat.imagen %}
                     <img src="{{ cat.imagen.url }}" alt="{{ cat.nombre }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
@@ -265,7 +275,7 @@
                     </button>
                 </div>
                 {% endif %}
-                </div>
+            </div>
 
             <div class="p-5 flex-1 flex flex-col justify-between relative z-10 bg-white">
                 <div>
@@ -278,9 +288,15 @@
                     <span class="text-xs text-slate-400 font-medium flex items-center gap-1">
                         <i class="ph ph-users"></i> {{ cat.equipos.all.count }} Equipos
                     </span>
-                    <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">
-                        Crear Ranking <i class="ph ph-caret-right"></i>
-                    </span>
+                    {% if user.is_staff %}
+                        <span class="text-slate-300 text-[10px] font-black uppercase flex items-center gap-1">
+                            Solo Lectura <i class="ph ph-lock"></i>
+                        </span>
+                    {% else %}
+                        <span class="text-blue-600 text-xs font-bold flex items-center gap-1 group-hover:underline">
+                            Crear Ranking <i class="ph ph-caret-right"></i>
+                        </span>
+                    {% endif %}
                 </div>
             </div>
         </a>

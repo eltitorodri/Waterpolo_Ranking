@@ -169,6 +169,11 @@ def crear_categoria(request):
 
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
+
+    if request.user.is_staff:
+        messages.warning(request, "Los administradores no pueden crear rankings, solo supervisarlos.")
+        return redirect('home')
+
     print("🚀 Inicio de crear_ranking")
     categoria_objetivo = None
     equipos = []
@@ -328,12 +333,28 @@ def valorar_equipos(request):
     equipos_list.sort(key=lambda x: x.nombre.lower())
 
     for equipo in equipos_list:
-        equipo.mi_valoracion = Valoracion.objects.using('mongo_db').filter(
-            equipo_id=equipo.pk,
-            usuario_id=request.user.id
-        ).first()
+        # LÓGICA DIVIDIDA POR ROLES
+        if request.user.is_staff or request.user.is_superuser:
+            # 1. MODO ADMIN: Obtener todas las valoraciones de este equipo
+            vals_equipo = list(Valoracion.objects.using('mongo_db').filter(equipo_id=equipo.pk))
+            equipo.todas_valoraciones = vals_equipo
+
+            # Calcular la media manualmente por seguridad en Mongo
+            if len(vals_equipo) > 0:
+                media = sum(v.puntuacion for v in vals_equipo) / len(vals_equipo)
+                equipo.media_admin = round(media, 1)
+            else:
+                equipo.media_admin = 0.0
+
+        else:
+            # 2. MODO USUARIO NORMAL: Obtener solo la suya
+            equipo.mi_valoracion = Valoracion.objects.using('mongo_db').filter(
+                equipo_id=equipo.pk,
+                usuario_id=request.user.id
+            ).first()
 
     return render(request, 'rankingWaterpolo/valorar_equipos.html', {'equipos': equipos_list})
+
 
 @staff_member_required(login_url='home')
 def importar_equipos_csv(request):

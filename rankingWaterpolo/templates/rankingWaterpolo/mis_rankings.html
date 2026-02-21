@@ -5,18 +5,21 @@
     <div>
         {% if user.is_staff %}
             <h1 class="text-3xl font-black text-blue-900">Panel Global de Rankings</h1>
-            <p class="text-slate-500">Administración: Viendo los rankings de todos los usuarios.</p>
+            <p class="text-slate-500">Administración: Viendo los rankings de todos los usuarios registrados.</p>
         {% else %}
             <h1 class="text-3xl font-black text-blue-900">Mis Rankings</h1>
             <p class="text-slate-500">Tu colección personal de Top 5.</p>
         {% endif %}
     </div>
+
+    {% if not user.is_staff %}
     <a href="{% url 'crear_top5' %}" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-200">
         <i class="ph ph-plus-circle text-xl"></i> Crear Nuevo
     </a>
+    {% endif %}
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
     {% for ranking in rankings %}
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative group">
 
@@ -75,20 +78,25 @@
         </div>
 
         <div class="bg-slate-50 p-3 flex justify-between items-center border-t border-slate-100">
-            <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">ID: {{ ranking.pk }}</span>
+            <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">ID: {{ ranking.pk|truncatechars:10 }}</span>
             <span class="text-[10px] text-slate-400">{{ ranking.fecha_creacion|date:"d M Y" }}</span>
         </div>
     </div>
     {% empty %}
-    <div class="col-span-full flex flex-col items-center justify-center py-20 text-center">
+    <div class="col-span-full flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl border-2 border-dashed border-slate-100">
         <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 animate-pulse">
             <i class="ph ph-list-dashes text-5xl text-blue-300"></i>
         </div>
         <h2 class="text-2xl font-bold text-slate-800 mb-2">¡El muro está vacío!</h2>
-        <p class="text-slate-500 mb-8 max-w-md mx-auto">Nadie ha publicado un ranking todavía.</p>
+        <p class="text-slate-500 mb-8 max-w-md mx-auto">
+            {% if user.is_staff %}Aún no se han publicado rankings en la plataforma.{% else %}Nadie ha publicado un ranking todavía.{% endif %}
+        </p>
+
+        {% if not user.is_staff %}
         <a href="{% url 'crear_top5' %}" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-xl shadow-blue-200 hover:scale-105 transition-transform">
-            Crear mi Ranking
+            Crear mi primer Ranking
         </a>
+        {% endif %}
     </div>
     {% endfor %}
 </div>
