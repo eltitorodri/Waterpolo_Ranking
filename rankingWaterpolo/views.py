@@ -482,3 +482,37 @@ def eliminar_usuario(request, usuario_id):
         messages.error(request, '¡Ey! No puedes eliminarte a ti mismo.')
 
     return redirect('gestionar_usuarios')
+
+
+@staff_member_required
+def crear_usuario(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')  # ¡Campo nuevo!
+        is_active = request.POST.get('is_active') == 'on'
+        is_staff = request.POST.get('is_staff') == 'on'
+        is_superuser = request.POST.get('is_superuser') == 'on'
+
+        # Validación básica: comprobar si el usuario ya existe
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Error: El nombre de usuario ya está pillado.')
+            return render(request, 'rankingWaterpolo/crear_usuario.html')
+
+        # Crear el usuario con contraseña encriptada
+        nuevo_usuario = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+
+        # Asignar permisos y estado
+        nuevo_usuario.is_active = is_active
+        nuevo_usuario.is_staff = is_staff
+        nuevo_usuario.is_superuser = is_superuser
+        nuevo_usuario.save()
+
+        messages.success(request, f'Usuario "{username}" creado correctamente.')
+        return redirect('gestionar_usuarios')
+
+    return render(request, 'rankingWaterpolo/crear_usuario.html')

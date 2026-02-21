@@ -29,6 +29,7 @@ urlpatterns = [
     path('gestionar-usuarios/', views.gestionar_usuarios, name='gestionar_usuarios'),
     path('editar-usuario/<int:usuario_id>/', views.editar_usuario, name='editar_usuario'),
     path('eliminar-usuario/<int:usuario_id>/', views.eliminar_usuario, name='eliminar_usuario'),
+    path('crear-usuario/', views.crear_usuario, name='crear_usuario'),
 ]
 
 if settings.DEBUG:
