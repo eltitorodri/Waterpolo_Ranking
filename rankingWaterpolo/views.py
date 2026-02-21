@@ -169,89 +169,158 @@ def crear_categoria(request):
 
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
-
     if request.user.is_staff:
         messages.warning(request, "Los administradores no pueden crear rankings, solo supervisarlos.")
         return redirect('home')
 
-    print("🚀 Inicio de crear_ranking")
     categoria_objetivo = None
     equipos = []
 
-    # --- FASE 1: Obtener equipos
     if categoria_id:
-        print(f"🔹 Buscando categoría por ID: {categoria_id}")
         try:
             oid = ObjectId(categoria_id) if ObjectId.is_valid(categoria_id) else categoria_id
             categoria_objetivo = Categoria.objects.using('mongo_db').filter(pk=oid).first()
 
             if categoria_objetivo:
-                print(f"✅ Encontrada categoría: {categoria_objetivo.nombre}")
-                # Filtramos equipos vinculados a esta categoría en Mongo
+                # COMPROBACIÓN: ¿Ya tiene un ranking en esta categoría?
+                ranking_existente = Ranking.objects.using('mongo_db').filter(
+                    user_id=request.user.id,
+                    categoria_id=categoria_objetivo.pk
+                ).first()
+
+                if ranking_existente:
+                    messages.info(request, "Ya tienes un ranking en esta categoría. Puedes editarlo aquí.")
+                    return redirect('editar_ranking', ranking_id=str(ranking_existente.pk))
+
                 equipos = list(Team.objects.using('mongo_db').filter(categoria_id=categoria_objetivo.pk))
-                print(f"🔹 Equipos encontrados para esta categoría: {len(equipos)}")
-            else:
-                print("⚠️ Categoría no encontrada")
         except Exception as e:
-            print(f"❌ ERROR buscando categoría: {e}")
+            pass
     else:
         equipos = list(Team.objects.using('mongo_db').all())
-        print(f"🔹 Ranking general: {len(equipos)} equipos cargados")
 
-    # --- FASE 2: Guardar ranking
     if request.method == 'POST':
-        print("💾 POST recibido para guardar ranking")
-        p1 = request.POST.get('posicion_1')
-        p2 = request.POST.get('posicion_2')
-        p3 = request.POST.get('posicion_3')
-        p4 = request.POST.get('posicion_4')
-        p5 = request.POST.get('posicion_5')
+        p1, p2, p3, p4, p5 = [request.POST.get(f'posicion_{i}') for i in range(1, 6)]
         titulo = request.POST.get('titulo')
-
-        print(f"🔹 Datos recibidos: titulo='{titulo}', p1='{p1}', p2='{p2}', p3='{p3}', p4='{p4}', p5='{p5}'")
 
         if all([p1, p2, p3, p4, p5, titulo]):
             try:
-                # Validamos IDs para que se guarden como strings limpios
-                ids_confirmados = []
-                for idx, pid in enumerate([p1, p2, p3, p4, p5], start=1):
-                    if ObjectId.is_valid(pid):
-                        ids_confirmados.append(str(pid))
-                    else:
-                        ids_confirmados.append(pid)
-
                 ranking_nuevo = Ranking(
                     user_id=request.user.id,
                     username=request.user.username,
-                    # Usamos el ID directamente si existe
                     categoria_id=categoria_objetivo.pk if categoria_objetivo else None,
                     nombre=titulo,
-                    posicion_1_id=ids_confirmados[0],
-                    posicion_2_id=ids_confirmados[1],
-                    posicion_3_id=ids_confirmados[2],
-                    posicion_4_id=ids_confirmados[3],
-                    posicion_5_id=ids_confirmados[4],
+                    posicion_1_id=str(p1), posicion_2_id=str(p2),
+                    posicion_3_id=str(p3), posicion_4_id=str(p4), posicion_5_id=str(p5),
                 )
-
-                print("🔹 Intentando save() en mongo_db...")
                 ranking_nuevo.save(using='mongo_db')
-
-                print("✅ Ranking guardado correctamente!")
                 messages.success(request, "¡Ranking creado con éxito!")
                 return redirect('mis_rankings')
             except Exception as e:
-                import traceback
-                print(f"❌ ERROR al guardar ranking: {str(e)}")
-                traceback.print_exc()  # Esto nos dirá la línea exacta del fallo
                 messages.error(request, f"Error al guardar ranking: {e}")
         else:
-            print("⚠️ Faltan campos en el POST")
             messages.error(request, "Por favor, completa todos los campos.")
 
-    print("🏁 Fin de crear_ranking")
     return render(request, 'rankingWaterpolo/crear_top5.html', {
         'equipos': equipos,
         'categoria': categoria_objetivo
+    })
+
+@login_required(login_url='login')
+def editar_ranking(request, ranking_id):
+    if request.user.is_staff:
+        return redirect('home')
+
+    try:
+        oid = ObjectId(ranking_id) if ObjectId.is_valid(ranking_id) else ranking_id
+        ranking = Ranking.objects.using('mongo_db').get(pk=oid)
+    except Exception:
+        messages.error(request, "Ranking no encontrado.")
+        return redirect('mis_rankings')
+
+    # Seguridad: solo el dueño puede editarlo
+    if ranking.user_id != request.user.id:
+        messages.error(request, "No tienes permiso para editar este ranking.")
+        return redirect('mis_rankings')
+
+    categoria_objetivo = ranking.categoria
+    if categoria_objetivo:
+        equipos = list(Team.objects.using('mongo_db').filter(categoria_id=categoria_objetivo.pk))
+    else:
+        equipos = list(Team.objects.using('mongo_db').all())
+
+    if request.method == 'POST':
+        p1, p2, p3, p4, p5 = [request.POST.get(f'posicion_{i}') for i in range(1, 6)]
+        titulo = request.POST.get('titulo')
+
+        if all([p1, p2, p3, p4, p5, titulo]):
+            ranking.nombre = titulo
+            ranking.posicion_1_id = str(p1)
+            ranking.posicion_2_id = str(p2)
+            ranking.posicion_3_id = str(p3)
+            ranking.posicion_4_id = str(p4)
+            ranking.posicion_5_id = str(p5)
+            ranking.save(using='mongo_db')
+            messages.success(request, "¡Ranking actualizado correctamente!")
+            return redirect('mis_rankings')
+        else:
+            messages.error(request, "Completa todos los campos.")
+
+    return render(request, 'rankingWaterpolo/crear_top5.html', {
+        'equipos': equipos,
+        'categoria': categoria_objetivo,
+        'ranking_edit': ranking # Pasamos el ranking para precargar los datos
+    })
+
+
+@staff_member_required(login_url='home')
+def estadisticas_globales(request):
+    # 1. Obtenemos todos los datos crudos en listas de Python para evitar fallos de Mongo/Djongo
+    todas_vals = list(Valoracion.objects.using('mongo_db').all())
+    todos_equipos = list(Team.objects.using('mongo_db').all())
+    todas_categorias = list(Categoria.objects.using('mongo_db').all())
+
+    total_valoraciones = len(todas_vals)
+
+    # 2. Calcular Equipos Más Valorados (Media y Cantidad)
+    equipos_stats = []
+    for eq in todos_equipos:
+        vals = [v for v in todas_vals if v.equipo_id == eq.pk]
+        if vals:
+            media = sum(v.puntuacion for v in vals) / len(vals)
+            equipos_stats.append({
+                'equipo': eq,
+                'media': round(media, 1),
+                'num_vals': len(vals)
+            })
+
+    # Ordenar por media de mayor a menor y quedarnos con el TOP 10
+    equipos_stats.sort(key=lambda x: x['media'], reverse=True)
+    top_equipos = equipos_stats[:10]
+
+    # 3. Promedio por Categoría
+    cat_stats = []
+    for cat in todas_categorias:
+        # Equipos que pertenecen a esta categoría
+        eqs_cat_ids = [eq.pk for eq in todos_equipos if eq.categoria_id == cat.pk]
+        # Valoraciones de esos equipos
+        vals_cat = [v for v in todas_vals if v.equipo_id in eqs_cat_ids]
+
+        if vals_cat:
+            media_cat = sum(v.puntuacion for v in vals_cat) / len(vals_cat)
+            cat_stats.append({
+                'categoria': cat,
+                'media': round(media_cat, 1),
+                'total_votos': len(vals_cat),
+                'total_equipos': len(eqs_cat_ids)
+            })
+
+    # Ordenar categorías por puntuación
+    cat_stats.sort(key=lambda x: x['media'], reverse=True)
+
+    return render(request, 'rankingWaterpolo/estadisticas.html', {
+        'total_valoraciones': total_valoraciones,
+        'top_equipos': top_equipos,
+        'cat_stats': cat_stats
     })
 
 

@@ -1,0 +1,113 @@
+{% extends 'rankingWaterpolo/base.html' %}
+
+{% block content %}
+<div class="mb-10 text-center animate-fade-in">
+    <span class="bg-blue-100 text-blue-700 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full mb-4 inline-block shadow-sm border border-blue-200">Data Analytics</span>
+    <h1 class="text-4xl font-black text-slate-900 mb-2">
+        Estadísticas <span class="text-blue-600">Globales</span>
+    </h1>
+    <p class="text-slate-500 max-w-2xl mx-auto">
+        Análisis de rendimiento, promedios y participación en toda la liga.
+    </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 animate-fade-in-up">
+    <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-8 text-white shadow-xl shadow-blue-200/50 relative overflow-hidden">
+        <i class="ph ph-chart-line-up text-8xl absolute -bottom-4 -right-4 opacity-10"></i>
+        <div class="relative z-10">
+            <p class="text-blue-100 font-bold uppercase tracking-wider text-sm mb-1">Participación Global</p>
+            <h3 class="text-5xl font-black mb-2">{{ total_valoraciones }}</h3>
+            <p class="text-blue-200 text-sm">Total de valoraciones registradas en la plataforma.</p>
+        </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-center">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-2xl"><i class="ph-fill ph-crown"></i></div>
+            <div>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Top Actual</p>
+                <h3 class="text-slate-800 font-black text-xl leading-tight truncate" title="{{ top_equipos.0.equipo.nombre }}">{{ top_equipos.0.equipo.nombre|default:"N/A" }}</h3>
+            </div>
+        </div>
+        <p class="text-slate-500 text-sm">Equipo con la nota media más alta de la liga ({{ top_equipos.0.media|default:"0" }} / 10).</p>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm flex flex-col justify-center">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl"><i class="ph-fill ph-users-three"></i></div>
+            <div>
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Mejor Categoría</p>
+                <h3 class="text-slate-800 font-black text-xl leading-tight truncate" title="{{ cat_stats.0.categoria.nombre }}">{{ cat_stats.0.categoria.nombre|default:"N/A" }}</h3>
+            </div>
+        </div>
+        <p class="text-slate-500 text-sm">Categoría con el mejor nivel general (Promedio: {{ cat_stats.0.media|default:"0" }} / 10).</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-24">
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+        <h3 class="text-xl font-black text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
+            <i class="ph-fill ph-fire text-orange-500"></i> Top Mejores Equipos
+        </h3>
+
+        <div class="space-y-4">
+            {% for stat in top_equipos %}
+            <div class="flex items-center gap-4 group hover:bg-slate-50 p-2 rounded-xl transition-colors">
+                <span class="w-6 text-center font-black {% if forloop.counter == 1 %}text-amber-500 text-lg{% elif forloop.counter == 2 %}text-slate-400 text-lg{% elif forloop.counter == 3 %}text-orange-500 text-lg{% else %}text-slate-300{% endif %}">
+                    {{ forloop.counter }}
+                </span>
+                <img src="{{ stat.equipo.escudo|default:'https://via.placeholder.com/32' }}" class="w-10 h-10 rounded-full border border-slate-100 shadow-sm bg-white object-contain p-1" onerror="this.src='https://via.placeholder.com/32'">
+                <div class="flex-1 overflow-hidden">
+                    <p class="font-bold text-slate-800 text-sm truncate group-hover:text-blue-600 transition-colors">{{ stat.equipo.nombre }}</p>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest">{{ stat.num_vals }} opiniones</p>
+                </div>
+                <div class="bg-slate-100 px-3 py-1.5 rounded-lg text-center min-w-[60px] group-hover:bg-blue-100 transition-colors">
+                    <span class="block font-black text-slate-700 group-hover:text-blue-700">{{ stat.media|floatformat:1 }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-10">
+                <p class="text-slate-500">Aún no hay datos suficientes.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+        <h3 class="text-xl font-black text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
+            <i class="ph-fill ph-chart-bar text-blue-500"></i> Promedio por Categoría
+        </h3>
+
+        <div class="space-y-6">
+            {% for stat in cat_stats %}
+            <div>
+                <div class="flex justify-between items-end mb-2">
+                    <div class="overflow-hidden pr-4">
+                        <p class="font-bold text-slate-700 truncate">{{ stat.categoria.nombre }}</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest">{{ stat.total_equipos }} equipos evaluados</p>
+                    </div>
+                    <span class="font-black text-slate-800">{{ stat.media|floatformat:1 }} <span class="text-xs text-slate-400 font-normal">/ 10</span></span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner">
+                    <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full relative" style="width: calc({{ stat.media }} * 10%)">
+                        <div class="absolute inset-0 bg-white/20 w-full animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-10">
+                <p class="text-slate-500">Aún no hay categorías valoradas.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+</style>
+{% endblock %}

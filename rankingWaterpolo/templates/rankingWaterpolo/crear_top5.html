@@ -6,7 +6,7 @@
 <div class="max-w-6xl mx-auto mt-6 mb-10">
     <div class="text-center mb-8">
         <h1 class="text-3xl font-black text-blue-900 mb-2">
-            🏆 Configurar Ranking {% if categoria %}- {{ categoria.nombre }}{% else %}General{% endif %}
+            {% if ranking_edit %}✏️ Editar Ranking{% else %}🏆 Configurar Ranking{% endif %} {% if categoria %}- {{ categoria.nombre }}{% else %}General{% endif %}
         </h1>
         <p class="text-slate-500">Arrastra los equipos desde la lista de disponibles hacia tu Ranking.</p>
     </div>
@@ -15,9 +15,10 @@
 
         <div class="max-w-xl mx-auto bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-8">
             <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Título del Ranking</label>
-            <input type="text" id="titulo_visible" placeholder="Ej: Mis Favoritos de la Liga" required
+            <input type="text" id="titulo_visible" required
+                   value="{% if ranking_edit %}{{ ranking_edit.nombre }}{% elif categoria %}{{ categoria.nombre }}{% else %}Mi Top 5{% endif %}"
                    onkeydown="return event.key != 'Enter';"
-                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
+                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-800 font-bold rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition">
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -63,9 +64,9 @@
                 <div class="mt-8 flex gap-3">
                     <button type="button" onclick="prepararYEnviar()" id="btnGuardarVisual"
                             class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
-                        <i class="ph ph-check-circle text-xl"></i> Guardar Ranking
+                        <i class="ph ph-check-circle text-xl"></i> {% if ranking_edit %}Guardar Cambios{% else %}Publicar Ranking{% endif %}
                     </button>
-                    <a href="{% url 'home' %}" class="px-6 py-3 bg-white text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition border border-slate-200">
+                    <a href="{% url 'mis_rankings' %}" class="px-6 py-3 bg-white text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition border border-slate-200">
                         Cancelar
                     </a>
                 </div>
@@ -112,6 +113,30 @@ new Sortable(elRanking, {
     },
     onSort: actualizarRanking,
     onRemove: actualizarRanking
+});
+
+// AUTO-COMPLETAR AL EDITAR
+document.addEventListener("DOMContentLoaded", function() {
+    {% if ranking_edit %}
+        var idsElegidos = [
+            "{{ ranking_edit.posicion_1_id }}",
+            "{{ ranking_edit.posicion_2_id }}",
+            "{{ ranking_edit.posicion_3_id }}",
+            "{{ ranking_edit.posicion_4_id }}",
+            "{{ ranking_edit.posicion_5_id }}"
+        ];
+
+        idsElegidos.forEach(function(id) {
+            if (id && id !== "None") {
+                var equipoEl = document.querySelector('#lista-disponibles > div[data-id="' + id + '"]');
+                if (equipoEl) {
+                    elRanking.appendChild(equipoEl);
+                }
+            }
+        });
+        actualizarRanking();
+        restaurarDiseñoOriginal();
+    {% endif %}
 });
 
 function actualizarRanking() {
@@ -186,13 +211,12 @@ function prepararYEnviar() {
         return;
     }
 
-    if (confirm("¿Publicar ranking?")) {
+    if (confirm("¿Confirmar acción?")) {
         btnGuardar.disabled = true;
         btnGuardar.innerHTML = '<i class="ph ph-spinner animate-spin text-xl"></i> Guardando...';
 
         document.getElementById('hidden_nombre').value = tituloVisible;
 
-        // IMPORTANTE: Aquí recogemos el ID, no el nombre
         for(var i=0; i<5; i++) {
             var equipoId = items[i].getAttribute('data-id');
             document.getElementById('hidden_eq' + (i+1)).value = equipoId;
