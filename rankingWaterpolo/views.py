@@ -17,17 +17,44 @@ from .forms import CategoriaForm, CSVImportForm, ValoracionForm
 
 # --- 1. AUTENTICACIÓN ---
 
+from django.contrib.auth.models import User
+
+
 def registro(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            messages.success(request, f"Bienvenido, {user.username}")
+        # 1. Capturamos los datos EXACTOS que vienen de tu HTML
+        username_str = request.POST.get('username')
+        email_str = request.POST.get('email')
+        pass1 = request.POST.get('password')
+        pass2 = request.POST.get('confirm_password')
+
+        # 2. Validaciones manuales
+        if pass1 != pass2:
+            messages.error(request, "Las contraseñas no coinciden.")
+            return render(request, 'rankingWaterpolo/signup.html')
+
+        if User.objects.filter(username=username_str).exists():
+            messages.error(request, "Ese NICKNAME ya está pillado.")
+            return render(request, 'rankingWaterpolo/signup.html')
+
+        # 3. Si todo va bien, creamos el usuario (y guardamos el email)
+        try:
+            nuevo_usuario = User.objects.create_user(
+                username=username_str,
+                email=email_str,
+                password=pass1
+            )
+            # Lo logueamos automáticamente
+            login(request, nuevo_usuario)
+            messages.success(request, f"¡Bienvenido a la piscina, {nuevo_usuario.username}!")
             return redirect('home')
-    else:
-        form = UserCreationForm()
-    return render(request, 'rankingWaterpolo/signup.html', {'form': form})
+
+        except Exception as e:
+            messages.error(request, f"Error al crear la cuenta: {e}")
+            return render(request, 'rankingWaterpolo/signup.html')
+
+    # Si entra por GET (simplemente abriendo la página)
+    return render(request, 'rankingWaterpolo/signup.html')
 
 
 def login_view(request):
@@ -606,3 +633,54 @@ def crear_usuario(request):
         return redirect('gestionar_usuarios')
 
     return render(request, 'rankingWaterpolo/crear_usuario.html')
+
+
+from django.contrib.admin.views.decorators import staff_member_required
+from bson import ObjectId  # Asegúrate de tener esto importado arriba del todo
+
+
+# --- 1. EXPLORADOR DE EQUIPOS (Público) ---
+@staff_member_required(login_url='home')
+def explorar_equipos(request):
+    # Capturamos lo que el usuario ha escrito en el buscador o el filtro
+    query = request.GET.get('q', '').strip()
+    categoria_filtro = request.GET.get('categoria', '')
+
+    # Traemos todo de la base de datos
+    todos_equipos = list(Team.objects.using('mongo_db').all())
+    categorias = list(Categoria.objects.using('mongo_db').all())
+
+    # Filtro 1: Búsqueda por texto (nombre del equipo)
+    if query:
+        todos_equipos = [eq for eq in todos_equipos if query.lower() in eq.nombre.lower()]
+
+    # Filtro 2: Filtrar por categoría seleccionada
+    if categoria_filtro:
+        todos_equipos = [eq for eq in todos_equipos if str(eq.categoria_id) == str(categoria_filtro)]
+
+    return render(request, 'rankingWaterpolo/explorar_equipos.html', {
+        'equipos': todos_equipos,
+        'categorias': categorias,
+        'query': query,
+        'categoria_filtro': str(categoria_filtro)
+    })
+
+
+# --- 2. ELIMINAR CATEGORÍA (Solo Admins) ---
+@staff_member_required(login_url='home')
+def eliminar_categoria(request, categoria_id):
+    try:
+        # Convertimos el ID para Mongo si es necesario
+        oid = ObjectId(categoria_id) if ObjectId.is_valid(categoria_id) else categoria_id
+        categoria = Categoria.objects.using('mongo_db').get(pk=oid)
+        nombre_cat = categoria.nombre
+
+        # Eliminamos la categoría
+        categoria.delete(using='mongo_db')
+        messages.success(request, f"🗑️ La categoría '{nombre_cat}' ha sido eliminada.")
+
+    except Exception as e:
+        messages.error(request, f"Error al eliminar la categoría: {e}")
+
+    # Redirigimos de vuelta a la zona de gestión
+    return redirect('/?section=gestion')

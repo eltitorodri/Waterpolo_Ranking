@@ -35,6 +35,10 @@
                     {% if user.is_authenticated %}
 
                         {% if user.is_staff %}
+                            <a href="{% url 'explorar_equipos' %}" class="text-slate-500 hover:text-blue-600 font-bold transition flex items-center gap-1">
+                                <i class="ph ph-magnifying-glass text-lg"></i> Directorio
+                            </a>
+
                             <a href="{% url 'estadisticas' %}" class="text-slate-500 hover:text-blue-600 font-bold transition flex items-center gap-1">
                                 <i class="ph ph-chart-bar text-lg"></i> Estadísticas
                             </a>

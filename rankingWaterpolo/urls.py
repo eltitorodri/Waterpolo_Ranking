@@ -34,6 +34,9 @@ urlpatterns = [
     path('estadisticas/', views.estadisticas_globales, name='estadisticas'),
     path('editar-ranking/<str:ranking_id>/', views.editar_ranking, name='editar_ranking'),
 
+    path('explorar/', views.explorar_equipos, name='explorar_equipos'),
+    path('categoria/eliminar/<str:categoria_id>/', views.eliminar_categoria, name='eliminar_categoria'),
+
 ]
 
 if settings.DEBUG:
