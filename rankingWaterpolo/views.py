@@ -6,29 +6,26 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
-from bson import ObjectId  # Importante para MongoDB
+from bson import ObjectId
 import csv
 import io
 
-# Importamos tus modelos y formularios
 from .models import Team, Ranking, Categoria, Valoracion
 from .forms import CategoriaForm, CSVImportForm, ValoracionForm
 
 
-# --- 1. AUTENTICACIÓN ---
 
 from django.contrib.auth.models import User
 
 
 def registro(request):
     if request.method == 'POST':
-        # 1. Capturamos los datos EXACTOS que vienen de tu HTML
         username_str = request.POST.get('username')
         email_str = request.POST.get('email')
         pass1 = request.POST.get('password')
         pass2 = request.POST.get('confirm_password')
 
-        # 2. Validaciones manuales
+
         if pass1 != pass2:
             messages.error(request, "Las contraseñas no coinciden.")
             return render(request, 'rankingWaterpolo/signup.html')
@@ -37,14 +34,14 @@ def registro(request):
             messages.error(request, "Ese NICKNAME ya está pillado.")
             return render(request, 'rankingWaterpolo/signup.html')
 
-        # 3. Si todo va bien, creamos el usuario (y guardamos el email)
+
         try:
             nuevo_usuario = User.objects.create_user(
                 username=username_str,
                 email=email_str,
                 password=pass1
             )
-            # Lo logueamos automáticamente
+
             login(request, nuevo_usuario)
             messages.success(request, f"¡Bienvenido a la piscina, {nuevo_usuario.username}!")
             return redirect('home')
@@ -53,7 +50,7 @@ def registro(request):
             messages.error(request, f"Error al crear la cuenta: {e}")
             return render(request, 'rankingWaterpolo/signup.html')
 
-    # Si entra por GET (simplemente abriendo la página)
+
     return render(request, 'rankingWaterpolo/signup.html')
 
 
@@ -74,7 +71,7 @@ def logout_view(request):
     return redirect('login')
 
 
-# --- 2. HOME (Gestión y Visualización) ---
+
 
 @login_required(login_url='login')
 def home(request):
@@ -83,7 +80,7 @@ def home(request):
 
     print(f"--- DEBUG HOME --- Seccion: {section}, Query: {query}")
 
-    # Filtro de categorías
+
     if query:
         categorias = Categoria.objects.using('mongo_db').filter(nombre__icontains=query)
     else:
@@ -92,13 +89,13 @@ def home(request):
     equipos = Team.objects.using('mongo_db').all()
     todas_vals = Valoracion.objects.using('mongo_db').all()
 
-    # Estadísticas
+
     total_valoraciones = todas_vals.count()
     mejor_equipo = None
     max_media = -1
 
     for equipo in equipos:
-        # Usamos equipo.pk o _id para filtrar valoraciones en Mongo
+
         vals_equipo = Valoracion.objects.using('mongo_db').filter(equipo_id=equipo.pk)
         if vals_equipo.exists():
             promedio = sum(v.puntuacion for v in vals_equipo) / vals_equipo.count()
@@ -119,8 +116,6 @@ def home(request):
     return render(request, 'rankingWaterpolo/home.html', context)
 
 
-# --- 3. GESTIÓN DE CATEGORÍAS (DEBUGGING INTENSO) ---
-
 @staff_member_required(login_url='home')
 def crear_categoria(request):
     equipos_para_html = Team.objects.using('mongo_db').all().order_by('nombre')
@@ -129,22 +124,22 @@ def crear_categoria(request):
         print("--- INICIO CREAR CATEGORIA (RELOAD BY NAME) ---")
         form = CategoriaForm(request.POST, request.FILES)
 
-        # Validación especial: Si falla solo por 'equipos', lo ignoramos
+
         if not form.is_valid() and 'equipos' in form.errors and len(form.errors) == 1:
             pass
 
-            # Verificamos si el nombre es válido
+
         if form.cleaned_data.get('nombre') and (form.is_valid() or ('equipos' in form.errors)):
             try:
                 nombre_cat = form.cleaned_data.get('nombre')
 
-                # 1. Guardamos la categoría
+
                 categoria_guardada = form.save(commit=False)
-                # No asignamos user si el modelo Categoria no tiene campo 'user'
+
                 categoria_guardada.save(using='mongo_db')
                 print(f"DEBUG: Categoría '{nombre_cat}' guardada inicialmente.")
 
-                # --- 2. RECARGA SEGURA POR NOMBRE ---
+
                 try:
                     categoria_real = Categoria.objects.using('mongo_db').get(nombre=nombre_cat)
                     print(f"DEBUG: Recarga exitosa. ID Real: {categoria_real.pk}")
@@ -152,18 +147,17 @@ def crear_categoria(request):
                     print(f"DEBUG: Falló la recarga por nombre: {e}")
                     categoria_real = categoria_guardada
 
-                # 3. Vincular Equipos
+
                 ids_equipos_seleccionados = request.POST.getlist('equipos')
                 conteo = 0
 
                 if ids_equipos_seleccionados:
                     for id_str in ids_equipos_seleccionados:
                         try:
-                            # Buscamos equipo por ID manejando ObjectId
+
                             oid = ObjectId(id_str) if ObjectId.is_valid(id_str) else id_str
                             equipo = Team.objects.using('mongo_db').get(pk=oid)
 
-                            # Asignamos la categoría RECARGADA
                             equipo.categoria = categoria_real
                             equipo.save(using='mongo_db')
                             conteo += 1
@@ -192,8 +186,6 @@ def crear_categoria(request):
     })
 
 
-# --- 4. RANKINGS (SOLUCIÓN FORENSE / MANUAL) ---
-
 @login_required(login_url='login')
 def crear_ranking(request, categoria_id=None):
     if request.user.is_staff:
@@ -209,7 +201,7 @@ def crear_ranking(request, categoria_id=None):
             categoria_objetivo = Categoria.objects.using('mongo_db').filter(pk=oid).first()
 
             if categoria_objetivo:
-                # COMPROBACIÓN: ¿Ya tiene un ranking en esta categoría?
+
                 ranking_existente = Ranking.objects.using('mongo_db').filter(
                     user_id=request.user.id,
                     categoria_id=categoria_objetivo.pk
@@ -264,7 +256,7 @@ def editar_ranking(request, ranking_id):
         messages.error(request, "Ranking no encontrado.")
         return redirect('mis_rankings')
 
-    # Seguridad: solo el dueño puede editarlo
+
     if ranking.user_id != request.user.id:
         messages.error(request, "No tienes permiso para editar este ranking.")
         return redirect('mis_rankings')
@@ -295,20 +287,20 @@ def editar_ranking(request, ranking_id):
     return render(request, 'rankingWaterpolo/crear_top5.html', {
         'equipos': equipos,
         'categoria': categoria_objetivo,
-        'ranking_edit': ranking # Pasamos el ranking para precargar los datos
+        'ranking_edit': ranking
     })
 
 
 @staff_member_required(login_url='home')
 def estadisticas_globales(request):
-    # 1. Obtenemos todos los datos crudos en listas de Python para evitar fallos de Mongo/Djongo
+
     todas_vals = list(Valoracion.objects.using('mongo_db').all())
     todos_equipos = list(Team.objects.using('mongo_db').all())
     todas_categorias = list(Categoria.objects.using('mongo_db').all())
 
     total_valoraciones = len(todas_vals)
 
-    # 2. Calcular Equipos Más Valorados (Media y Cantidad)
+
     equipos_stats = []
     for eq in todos_equipos:
         vals = [v for v in todas_vals if v.equipo_id == eq.pk]
@@ -320,16 +312,16 @@ def estadisticas_globales(request):
                 'num_vals': len(vals)
             })
 
-    # Ordenar por media de mayor a menor y quedarnos con el TOP 10
+
     equipos_stats.sort(key=lambda x: x['media'], reverse=True)
     top_equipos = equipos_stats[:10]
 
-    # 3. Promedio por Categoría
+
     cat_stats = []
     for cat in todas_categorias:
-        # Equipos que pertenecen a esta categoría
+
         eqs_cat_ids = [eq.pk for eq in todos_equipos if eq.categoria_id == cat.pk]
-        # Valoraciones de esos equipos
+
         vals_cat = [v for v in todas_vals if v.equipo_id in eqs_cat_ids]
 
         if vals_cat:
@@ -341,7 +333,7 @@ def estadisticas_globales(request):
                 'total_equipos': len(eqs_cat_ids)
             })
 
-    # Ordenar categorías por puntuación
+
     cat_stats.sort(key=lambda x: x['media'], reverse=True)
 
     return render(request, 'rankingWaterpolo/estadisticas.html', {
@@ -355,7 +347,7 @@ def estadisticas_globales(request):
 def mis_rankings(request):
     print("🚀 Inicio de mis_rankings")
 
-    # 1. LOGICA DE PERMISOS
+
     try:
         if request.user.is_staff:
             print("👑 Usuario staff: cargando todos los rankings")
@@ -364,14 +356,14 @@ def mis_rankings(request):
             print("👤 Usuario normal: cargando solo sus rankings")
             rankings = list(Ranking.objects.using('mongo_db').filter(user_id=request.user.id))
 
-        # Ordenación manual por fecha
+
         rankings.sort(key=lambda r: r.fecha_creacion if r.fecha_creacion else 0, reverse=True)
         print(f"✅ {len(rankings)} rankings cargados")
     except Exception as e:
         print(f"❌ ERROR al cargar rankings: {e}")
         rankings = []
 
-    # 2. HIDRATAR LOS RANKINGS (Cargar objetos Team desde los IDs guardados)
+
     for ranking in rankings:
         print(f"🔹 Procesando ranking: {ranking.nombre}")
         ranking.lista_equipos = []
@@ -400,12 +392,12 @@ def mis_rankings(request):
     })
 
 
-# --- 5. OTRAS FUNCIONES ---
+
 
 @login_required(login_url='login')
 def valorar_equipos(request):
     if request.method == 'POST':
-        # ... (el código del POST se queda igual)
+
         team_id = request.POST.get('team_id')
         puntos = request.POST.get('puntuacion')
         comentario = request.POST.get('comentario')
@@ -423,19 +415,17 @@ def valorar_equipos(request):
                 print(f"❌ ERROR valoración: {e}")
         return redirect('valorar_equipos')
 
-    # --- CAMBIO AQUÍ: Quitamos el .order_by() de la base de datos ---
+
     equipos_list = list(Team.objects.using('mongo_db').all())
-    # Ordenamos con Python para que Djongo no explote
     equipos_list.sort(key=lambda x: x.nombre.lower())
 
     for equipo in equipos_list:
-        # LÓGICA DIVIDIDA POR ROLES
+
         if request.user.is_staff or request.user.is_superuser:
-            # 1. MODO ADMIN: Obtener todas las valoraciones de este equipo
             vals_equipo = list(Valoracion.objects.using('mongo_db').filter(equipo_id=equipo.pk))
             equipo.todas_valoraciones = vals_equipo
 
-            # Calcular la media manualmente por seguridad en Mongo
+
             if len(vals_equipo) > 0:
                 media = sum(v.puntuacion for v in vals_equipo) / len(vals_equipo)
                 equipo.media_admin = round(media, 1)
@@ -443,7 +433,7 @@ def valorar_equipos(request):
                 equipo.media_admin = 0.0
 
         else:
-            # 2. MODO USUARIO NORMAL: Obtener solo la suya
+
             equipo.mi_valoracion = Valoracion.objects.using('mongo_db').filter(
                 equipo_id=equipo.pk,
                 usuario_id=request.user.id
@@ -461,7 +451,7 @@ def importar_equipos_csv(request):
             try:
                 data_set = archivo.read().decode('UTF-8')
                 io_string = io.StringIO(data_set)
-                next(io_string)  # Saltar cabecera
+                next(io_string)
 
                 conteo = 0
                 for row in csv.reader(io_string, delimiter=',', quotechar='"'):
@@ -494,7 +484,6 @@ def importar_equipos_csv(request):
 
 @staff_member_required(login_url='home')
 def editar_categoria(request, categoria_id):
-    # 1. Buscar la categoría por su ObjectId de Mongo
     try:
         oid = ObjectId(categoria_id) if ObjectId.is_valid(categoria_id) else categoria_id
         categoria = Categoria.objects.using('mongo_db').get(pk=oid)
@@ -502,34 +491,29 @@ def editar_categoria(request, categoria_id):
         messages.error(request, "Categoría no encontrada.")
         return redirect('home')
 
-    # 2. Cargar todos los equipos y los que ya pertenecen a esta categoría
-    # (Al estar en Django 3.1, ordenamos con Python por seguridad)
     todos_los_equipos = list(Team.objects.using('mongo_db').all())
     todos_los_equipos.sort(key=lambda x: x.nombre.lower())
 
     equipos_actuales = Team.objects.using('mongo_db').filter(categoria=categoria)
     ids_actuales = [str(eq.pk) for eq in equipos_actuales]
 
-    # 3. Procesar el formulario cuando el admin le da a Guardar
     if request.method == 'POST':
         nuevo_nombre = request.POST.get('nombre')
-        equipos_seleccionados = request.POST.getlist('equipos')  # IDs que el admin ha marcado
+        equipos_seleccionados = request.POST.getlist('equipos')
 
-        # Actualizamos el nombre si ha cambiado
+
         if nuevo_nombre and nuevo_nombre != categoria.nombre:
             categoria.nombre = nuevo_nombre
             categoria.save(using='mongo_db')
 
-        # A) Desvincular equipos que el admin ha desmarcado
         for equipo in equipos_actuales:
             if str(equipo.pk) not in equipos_seleccionados:
                 equipo.categoria = None
                 equipo.save(using='mongo_db')
 
-        # B) Vincular los equipos que el admin ha marcado
         if equipos_seleccionados:
             for id_str in equipos_seleccionados:
-                # Solo actualizamos si no estaba ya en la categoría para ahorrar consultas
+
                 if id_str not in ids_actuales:
                     try:
                         eq_oid = ObjectId(id_str) if ObjectId.is_valid(id_str) else id_str
@@ -555,25 +539,25 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 
 
-# 1. Ver la lista de usuarios
-@staff_member_required  # Esto protege la vista para que solo entre el staff/admin
+
+@staff_member_required
 def gestionar_usuarios(request):
-    # Traemos todos los usuarios, ordenados para que los superadmins salgan primero
+
     usuarios = User.objects.all().order_by('-is_superuser', '-is_active', 'username')
     return render(request, 'rankingWaterpolo/gestionar_usuarios.html', {'usuarios': usuarios})
 
 
-# 2. Editar un usuario
+
 @staff_member_required
 def editar_usuario(request, usuario_id):
     usuario = get_object_or_404(User, id=usuario_id)
 
     if request.method == 'POST':
-        # Recogemos los datos del formulario a mano (es más rápido que crear un forms.py)
+
         usuario.username = request.POST.get('username')
         usuario.email = request.POST.get('email')
 
-        # Los checkboxes en HTML devuelven 'on' si están marcados
+
         usuario.is_active = request.POST.get('is_active') == 'on'
         usuario.is_staff = request.POST.get('is_staff') == 'on'
         usuario.is_superuser = request.POST.get('is_superuser') == 'on'
@@ -582,16 +566,15 @@ def editar_usuario(request, usuario_id):
         messages.success(request, f'Usuario {usuario.username} actualizado correctamente.')
         return redirect('gestionar_usuarios')
 
-    # Le pasamos el usuario a la plantilla con el nombre 'usuario_edit'
+
     return render(request, 'rankingWaterpolo/editar_usuario.html', {'usuario_edit': usuario})
 
 
-# 3. Eliminar un usuario
 @staff_member_required
 def eliminar_usuario(request, usuario_id):
     usuario = get_object_or_404(User, id=usuario_id)
 
-    # Doble check de seguridad: no te puedes borrar a ti mismo
+
     if request.user.id != usuario.id:
         usuario.delete()
         messages.success(request, 'Usuario eliminado para siempre.')
@@ -606,24 +589,21 @@ def crear_usuario(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
-        password = request.POST.get('password')  # ¡Campo nuevo!
+        password = request.POST.get('password')
         is_active = request.POST.get('is_active') == 'on'
         is_staff = request.POST.get('is_staff') == 'on'
         is_superuser = request.POST.get('is_superuser') == 'on'
 
-        # Validación básica: comprobar si el usuario ya existe
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Error: El nombre de usuario ya está pillado.')
             return render(request, 'rankingWaterpolo/crear_usuario.html')
 
-        # Crear el usuario con contraseña encriptada
         nuevo_usuario = User.objects.create_user(
             username=username,
             email=email,
             password=password
         )
 
-        # Asignar permisos y estado
         nuevo_usuario.is_active = is_active
         nuevo_usuario.is_staff = is_staff
         nuevo_usuario.is_superuser = is_superuser
@@ -636,25 +616,20 @@ def crear_usuario(request):
 
 
 from django.contrib.admin.views.decorators import staff_member_required
-from bson import ObjectId  # Asegúrate de tener esto importado arriba del todo
+from bson import ObjectId
 
 
-# --- 1. EXPLORADOR DE EQUIPOS (Público) ---
 @staff_member_required(login_url='home')
 def explorar_equipos(request):
-    # Capturamos lo que el usuario ha escrito en el buscador o el filtro
     query = request.GET.get('q', '').strip()
     categoria_filtro = request.GET.get('categoria', '')
 
-    # Traemos todo de la base de datos
     todos_equipos = list(Team.objects.using('mongo_db').all())
     categorias = list(Categoria.objects.using('mongo_db').all())
 
-    # Filtro 1: Búsqueda por texto (nombre del equipo)
     if query:
         todos_equipos = [eq for eq in todos_equipos if query.lower() in eq.nombre.lower()]
 
-    # Filtro 2: Filtrar por categoría seleccionada
     if categoria_filtro:
         todos_equipos = [eq for eq in todos_equipos if str(eq.categoria_id) == str(categoria_filtro)]
 
@@ -665,22 +640,17 @@ def explorar_equipos(request):
         'categoria_filtro': str(categoria_filtro)
     })
 
-
-# --- 2. ELIMINAR CATEGORÍA (Solo Admins) ---
 @staff_member_required(login_url='home')
 def eliminar_categoria(request, categoria_id):
     try:
-        # Convertimos el ID para Mongo si es necesario
         oid = ObjectId(categoria_id) if ObjectId.is_valid(categoria_id) else categoria_id
         categoria = Categoria.objects.using('mongo_db').get(pk=oid)
         nombre_cat = categoria.nombre
 
-        # Eliminamos la categoría
         categoria.delete(using='mongo_db')
         messages.success(request, f"🗑️ La categoría '{nombre_cat}' ha sido eliminada.")
 
     except Exception as e:
         messages.error(request, f"Error al eliminar la categoría: {e}")
 
-    # Redirigimos de vuelta a la zona de gestión
     return redirect('/?section=gestion')

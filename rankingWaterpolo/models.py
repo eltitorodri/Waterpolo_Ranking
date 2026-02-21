@@ -2,7 +2,6 @@ from djongo import models
 from django.contrib.auth.models import User
 
 
-# --- 1. CATEGORÍAS ---
 class Categoria(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
@@ -18,20 +17,17 @@ class Categoria(models.Model):
         verbose_name="Logo/Imagen"
     )
 
-    # En Mongo/Djongo, ManyToMany se guarda como una lista de IDs internamente
     equipos = models.ManyToManyField('Team', related_name='categorias_asignadas', blank=True)
 
     def __str__(self):
         return self.nombre
 
 
-# --- 2. EQUIPOS (Team) ---
 class Team(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     nombre = models.CharField(max_length=100)
     escudo = models.URLField(max_length=500, blank=True, null=True)
 
-    # FK a Categoria (dentro de la misma DB Mongo)
     categoria = models.ForeignKey(
         'Categoria',
         on_delete=models.SET_NULL,
@@ -55,13 +51,10 @@ class Team(models.Model):
         return f"{self.nombre} ({self.liga})"
 
 
-# --- 3. VALORACIONES ---
 class Valoracion(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     equipo = models.ForeignKey('Team', on_delete=models.CASCADE, related_name='valoraciones')
 
-    # IMPORTANTE: Guardamos el ID del usuario (de SQLite) como Integer
-    # porque Mongo no puede hacer un JOIN real con la tabla de SQLite
     usuario_id = models.IntegerField()
     puntuacion = models.IntegerField(help_text="Puntuación del 1 al 10")
     comentario = models.TextField(blank=True)
@@ -75,7 +68,6 @@ class Valoracion(models.Model):
         return f"Val: {self.puntuacion} - {self.equipo.nombre}"
 
 
-# --- 4. RANKINGS ---
 class Ranking(models.Model):
     _id = models.ObjectIdField(primary_key=True)
     user_id = models.IntegerField()
@@ -85,7 +77,6 @@ class Ranking(models.Model):
     nombre = models.CharField(max_length=100, default="Mi Top 5")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
-    # IDs de equipos guardados como strings de 24 caracteres (formato hexadecimal de ObjectId)
     posicion_1_id = models.CharField(max_length=24)
     posicion_2_id = models.CharField(max_length=24)
     posicion_3_id = models.CharField(max_length=24)

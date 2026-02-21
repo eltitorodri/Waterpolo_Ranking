@@ -5,24 +5,19 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # --- HOME ---
     path('home/', views.home, name='home'),
     path('', views.home, name='index'),
 
-    # --- AUTENTICACIÓN ---
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('registro/', views.registro, name='registro'),
 
-    # --- RANKINGS ---
     path('crear-ranking/', views.crear_ranking, name='crear_top5'),
     path('crear-ranking/<str:categoria_id>/', views.crear_ranking, name='crear_ranking_categoria'),
 
-    # --- RESTO ---
     path('mis-rankings/', views.mis_rankings, name='mis_rankings'),
     path('valorar-equipos/', views.valorar_equipos, name='valorar_equipos'),
     path('crear-categoria/', views.crear_categoria, name='crear_categoria'),
-    # En urlpatterns añade:
     path('importar-equipos-csv/', views.importar_equipos_csv, name='importar_equipos_csv'),
     path('editar-categoria/<str:categoria_id>/', views.editar_categoria, name='editar_categoria'),
 

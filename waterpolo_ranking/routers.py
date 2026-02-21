@@ -17,7 +17,7 @@ class MongoRouter:
         return 'default'
 
     def allow_relation(self, obj1, obj2, **hints):
-        # Solo permite relaciones si ambos objetos están en la misma base de datos
+
         if (
             obj1._meta.app_label in self.route_app_labels and
             obj2._meta.app_label in self.route_app_labels
@@ -28,7 +28,7 @@ class MongoRouter:
             obj2._meta.app_label not in self.route_app_labels
         ):
             return True
-        return False # Bloquea relaciones cruzadas (ej: ForeignKey de Mongo a SQLite)
+        return False
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if app_label in self.route_app_labels:
